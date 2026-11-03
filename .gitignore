@@ -3,3 +3,6 @@
 /.dev/
 /dist/
 *.out
+# Left by go-semantic-release in CI; GoReleaser wants a clean tree.
+/.semrel/
+/.generated-go-semantic-release-changelog.md
