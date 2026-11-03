@@ -1,0 +1,5 @@
+/tofu-api
+/providers/
+/.dev/
+/dist/
+*.out

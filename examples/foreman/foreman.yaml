@@ -1,0 +1,154 @@
+# Everything tofu-api needs to serve the Foreman provider: hosts, the VMs or
+# bare metal Foreman provisions, and what they are built from.
+#
+#   scripts/fetch-provider.sh terraform-coop/foreman 0.7.0
+#   FOREMAN_HOSTNAME=foreman.example.com FOREMAN_CLIENT_USERNAME=admin \
+#   FOREMAN_CLIENT_PASSWORD=... FOREMAN_ORGANIZATION_ID=1 FOREMAN_LOCATION_ID=2 \
+#     tofu-api serve -config examples/foreman/foreman.yaml
+#
+# Another provider is another file like this one, and no code.
+
+# By default, the paths start with /foreman/v1/namespaces/{namespace}:
+# POST /foreman/v1/namespaces/acme/host.
+
+provider:
+  # As scripts/fetch-provider.sh prints it; {provider} in the API's paths is
+  # the name in it, foreman.
+  binary_path: providers/registry.terraform.io/terraform-coop/foreman/0.7.0/linux_amd64/terraform-provider-foreman_v0.7.0
+
+  # Building a host can take long: a create is undone past this, and goes on
+  # when the caller leaves.
+  timeout: 30m
+
+  # The provider block, as in Terraform. ${VAR} is read from the environment
+  # when serving: keep secrets out of this file.
+  config:
+    server_hostname: ${FOREMAN_HOSTNAME}
+    server_protocol: https
+    client_username: ${FOREMAN_CLIENT_USERNAME}
+    client_password: ${FOREMAN_CLIENT_PASSWORD}
+    # What the provider creates and reads is in this organization and
+    # location: a Foreman taxonomy, the namespace in a shared setup.
+    organization_id: ${FOREMAN_ORGANIZATION_ID}
+    location_id: ${FOREMAN_LOCATION_ID}
+    # The provider writes its own log to ./terraform-provider-foreman.log by
+    # default; - keeps it on its standard error.
+    provider_logfile: "-"
+    provider_loglevel: WARNING
+
+# A provider process per namespace: a namespace is a Foreman organization.
+# Its secret in Vault is laid over provider.config: its organization and
+# location, and the credentials of a Foreman user limited to them, so that a
+# namespace reaches nothing of another's.
+#
+#   vault kv put secret/tofu-api/foreman/acme organization_id=3 location_id=2 \
+#     client_username=tofu-api-acme client_password=...
+#   path "secret/data/tofu-api/foreman/*" { capabilities = ["read"] }
+#
+# namespaces:
+#   vault:
+#     address: ${VAULT_ADDR}
+#     role_id: ${VAULT_ROLE_ID}
+#     secret_id_file: /etc/tofu-api/foreman.vault-secret-id   # or secret_id: ${VAULT_SECRET_ID}
+#     path: tofu-api/foreman/{namespace}                       # in the KV v2 engine at secret/
+#   # idle: 10m           # a namespace's process stops once unused that long
+#   # max_age: 1h         # or that old, so that rotated secrets are read again
+#   # max_providers: 20   # processes at once
+
+# The resource types to expose, and the rules over their schemas. Expressions
+# are CEL (https://cel.dev); they see the namespace of the path as ns and the
+# request body as spec.
+types:
+  foreman_host:
+    attributes:
+      name:
+        pattern: '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
+        description: The host's short name, a DNS label.
+      # Derived by Foreman from the name.
+      shortname:
+        hidden: true
+
+      # The provider checks these, but only once the request has reached it:
+      # in the contract, a wrong value is a 400 before any call.
+      provision_method:
+        enum: [build, image]
+      owner_type:
+        enum: [User, Usergroup]
+
+      comment:
+        maxLength: 255
+        description: Free text. Changing it rebuilds the host.
+
+      # Not the caller's choice: power cycling through the BMC on every
+      # create and update, the build flag, the provider's own retries, a
+      # removed attribute, and a root password, which comes from the hostgroup.
+      enable_bmc:
+        hidden: true
+      set_build_flag:
+        hidden: true
+      retry_count:
+        hidden: true
+      bmc_success:
+        hidden: true
+      root_password:
+        hidden: true
+
+  foreman_hostgroup:
+    attributes:
+      name:
+        pattern: '^[A-Za-z0-9][A-Za-z0-9 ._-]{0,62}$'
+      root_password:
+        hidden: true
+
+  foreman_domain:
+    attributes:
+      name:
+        pattern: '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$'
+        description: The DNS domain, such as acme.example.com.
+      fullname:
+        default: spec.name
+        maxLength: 255
+
+  foreman_subnet:
+    attributes:
+      network_type:
+        enum: [IPv4, IPv6]
+      boot_mode:
+        enum: [Static, DHCP]
+      ipam:
+        enum: [DHCP, Internal DB, Random DB, None]
+      vlanid:
+        description: 802.1Q VLAN id, 1 to 4094.
+
+# Errors: the provider reports Foreman's answers as text, with the status as
+# "statusCode: [422]", which these match in order; an error none matches is a
+# 502 upstream_error.
+errors:
+  - code: already_exists
+    match: 'statusCode: \[422\][\s\S]*has already been taken'
+    status: 409
+    title: Already exists
+
+  # Foreman's validation errors, such as an unknown hostgroup or a subnet
+  # that does not hold the address.
+  - code: invalid
+    match: 'statusCode: \[422\]'
+    status: 400
+    title: Refused by Foreman
+
+  # A resource outside the user's organization is not found either.
+  - code: not_found
+    match: 'statusCode: \[404\]'
+    status: 404
+    title: Not found
+
+  - code: upstream_auth
+    match: 'statusCode: \[(401|403)\]'
+    status: 502
+    title: Upstream refused our credentials
+
+  - code: upstream_unavailable
+    match: 'connection refused|no such host|i/o timeout|statusCode: \[50[234]\]'
+    status: 503
+    title: Upstream unavailable
+    retryable: true

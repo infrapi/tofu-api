@@ -1,0 +1,1436 @@
+{
+  "components": {
+    "parameters": {
+      "id": {
+        "description": "The id the provider gave the resource, as returned on create.",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "namespace": {
+        "in": "path",
+        "name": "namespace",
+        "required": true,
+        "schema": {
+          "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "An error, as RFC 9457 problem details"
+      }
+    },
+    "schemas": {
+      "Domain": {
+        "properties": {
+          "__meta__": {
+            "description": "@SUMMARY Foreman representation of domain. Domains serve as an identification string that defines autonomy, authority, or control for a portion of a network.",
+            "type": "boolean"
+          },
+          "fullname": {
+            "description": "Description of the domain",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the domain - the full DNS domain name. @EXAMPLE \"dev.dc1.company.com\"",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "A map of parameters that will be saved as domain parameters in the domain config.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "DomainSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "fullname": {
+            "description": "Description of the domain Defaults to `spec.name`.",
+            "maxLength": 255,
+            "type": "string",
+            "x-default": "spec.name"
+          },
+          "name": {
+            "description": "The DNS domain, such as acme.example.com.",
+            "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "A map of parameters that will be saved as domain parameters in the domain config.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "Host": {
+        "properties": {
+          "__meta__": {
+            "description": "@SUMMARY A host managed by Foreman.",
+            "type": "boolean"
+          },
+          "architecture_id": {
+            "description": "ID of the architecture of this host",
+            "type": "number"
+          },
+          "comment": {
+            "description": "Add additional information about this host.Note: Changes to this attribute will trigger a host rebuild.",
+            "type": "string"
+          },
+          "compute_attributes": {
+            "description": "Hypervisor specific VM options. Must be a JSON string, as every compute provider has different attributes schema",
+            "type": "string"
+          },
+          "compute_profile_id": {
+            "type": "number"
+          },
+          "compute_resource_id": {
+            "type": "number"
+          },
+          "config_group_ids": {
+            "description": "IDs of the applied config groups.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "domain_id": {
+            "description": "ID of the domain to assign to the host.",
+            "type": "number"
+          },
+          "domain_name": {
+            "description": "The domain name of the host.",
+            "type": "string"
+          },
+          "environment_id": {
+            "description": "ID of the environment to assign to the host.",
+            "type": "number"
+          },
+          "fqdn": {
+            "description": "Host fully qualified domain name. Read-only value to be used in variables. @EXAMPLE \"compute01.dc1.company.com\"",
+            "type": "string"
+          },
+          "hostgroup_id": {
+            "description": "ID of the hostgroup to assign to the host.",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "image_id": {
+            "description": "ID of an image to be used as base for this host when cloning",
+            "type": "number"
+          },
+          "interfaces_attributes": {
+            "items": {
+              "properties": {
+                "attached_devices": {
+                  "description": "Identifiers of attached interfaces, e.g. 'eth1', 'eth2' as comma-separated list",
+                  "type": "string"
+                },
+                "attached_to": {
+                  "description": "Identifier of the interface to which this interface belongs.",
+                  "type": "string"
+                },
+                "bmc_provider": {
+                  "description": "Provider used for BMC/IMPI functionality. Values include: `\"IPMI\"`",
+                  "type": "string"
+                },
+                "compute_attributes": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Hypervisor specific interface options",
+                  "type": "object"
+                },
+                "id": {
+                  "description": "Unique identifier for the interface.",
+                  "type": "number"
+                },
+                "identifier": {
+                  "description": "Identifier of this interface local to the host.",
+                  "type": "string"
+                },
+                "ip": {
+                  "description": "IP address associated with the interface.",
+                  "type": "string"
+                },
+                "mac": {
+                  "description": "MAC address associated with the interface.",
+                  "type": "string"
+                },
+                "managed": {
+                  "description": "Whether or not this interface is managed by Foreman.",
+                  "type": "boolean"
+                },
+                "name": {
+                  "description": "Name of the interface",
+                  "type": "string"
+                },
+                "primary": {
+                  "description": "Whether or not this is the primary interface.",
+                  "type": "boolean"
+                },
+                "provision": {
+                  "description": "Whether or not this interface is used to provision the host.",
+                  "type": "boolean"
+                },
+                "subnet_id": {
+                  "description": "ID of the subnet to associate with this interface.",
+                  "type": "number"
+                },
+                "type": {
+                  "description": "The type of interface. Values include: `\"interface\"`, `\"bmc\"`, `\"bond\"`, `\"bridge\"`.",
+                  "type": "string"
+                },
+                "username": {
+                  "description": "Username used for BMC/IPMI functionality.",
+                  "type": "string"
+                },
+                "virtual": {
+                  "description": "Whether or not this is a virtual interface.",
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "manage_power_operations": {
+            "description": "Manage power operations, e.g. power on, if host's build flag will be enabled.",
+            "type": "boolean"
+          },
+          "managed": {
+            "description": "Whether or not this host is managed by Foreman. Create host only, don't set build status or manage power states.",
+            "type": "boolean"
+          },
+          "medium_id": {
+            "description": "ID of the medium mounted on the host.",
+            "type": "number"
+          },
+          "model_id": {
+            "description": "ID of the hardware model if applicable",
+            "type": "number"
+          },
+          "name": {
+            "description": "Name of this host as stored in Foreman. Can be short name or FQDN, depending on your Foreman settings (especially the setting 'append_domain_name_for_hosts').",
+            "type": "string"
+          },
+          "operatingsystem_id": {
+            "description": "ID of the operating system to put on the host.",
+            "type": "number"
+          },
+          "owner_id": {
+            "description": "ID of the user or usergroup that owns the host.",
+            "type": "number"
+          },
+          "owner_type": {
+            "description": "Owner of the host, must be either User ot Usergroup",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "A map of parameters that will be saved as host parameters in the machine config.",
+            "type": "object"
+          },
+          "provision_method": {
+            "description": "Sets the provision method in Foreman for this host: either network-based ('build') or image-based ('image')",
+            "type": "string"
+          },
+          "ptable_id": {
+            "description": "ID of the partition table the host should use",
+            "type": "number"
+          },
+          "puppet_class_ids": {
+            "description": "IDs of the applied puppet classes.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "subnet_id": {
+            "description": "ID of the subnet the host should be placed in",
+            "type": "number"
+          },
+          "token": {
+            "description": "Build token. Can be used to signal to Foreman that a host build is complete.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "HostSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "architecture_id": {
+            "description": "ID of the architecture of this host",
+            "type": "number"
+          },
+          "comment": {
+            "description": "Free text. Changing it rebuilds the host.",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "compute_attributes": {
+            "description": "Hypervisor specific VM options. Must be a JSON string, as every compute provider has different attributes schema",
+            "type": "string"
+          },
+          "compute_profile_id": {
+            "type": "number"
+          },
+          "compute_resource_id": {
+            "type": "number"
+          },
+          "config_group_ids": {
+            "description": "IDs of the applied config groups.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "domain_id": {
+            "description": "ID of the domain to assign to the host.",
+            "type": "number"
+          },
+          "environment_id": {
+            "description": "ID of the environment to assign to the host.",
+            "type": "number"
+          },
+          "hostgroup_id": {
+            "description": "ID of the hostgroup to assign to the host.",
+            "type": "number"
+          },
+          "image_id": {
+            "description": "ID of an image to be used as base for this host when cloning",
+            "type": "number"
+          },
+          "interfaces_attributes": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "attached_devices": {
+                  "description": "Identifiers of attached interfaces, e.g. 'eth1', 'eth2' as comma-separated list",
+                  "type": "string"
+                },
+                "attached_to": {
+                  "description": "Identifier of the interface to which this interface belongs.",
+                  "type": "string"
+                },
+                "bmc_provider": {
+                  "description": "Provider used for BMC/IMPI functionality. Values include: `\"IPMI\"`",
+                  "type": "string"
+                },
+                "compute_attributes": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Hypervisor specific interface options",
+                  "type": "object"
+                },
+                "identifier": {
+                  "description": "Identifier of this interface local to the host.",
+                  "type": "string"
+                },
+                "ip": {
+                  "description": "IP address associated with the interface.",
+                  "type": "string"
+                },
+                "mac": {
+                  "description": "MAC address associated with the interface.",
+                  "type": "string"
+                },
+                "managed": {
+                  "description": "Whether or not this interface is managed by Foreman.",
+                  "type": "boolean"
+                },
+                "name": {
+                  "description": "Name of the interface",
+                  "type": "string"
+                },
+                "password": {
+                  "description": "Associated password used for BMC/IPMI functionality.",
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                "primary": {
+                  "description": "Whether or not this is the primary interface.",
+                  "type": "boolean"
+                },
+                "provision": {
+                  "description": "Whether or not this interface is used to provision the host.",
+                  "type": "boolean"
+                },
+                "subnet_id": {
+                  "description": "ID of the subnet to associate with this interface.",
+                  "type": "number"
+                },
+                "type": {
+                  "description": "The type of interface. Values include: `\"interface\"`, `\"bmc\"`, `\"bond\"`, `\"bridge\"`.",
+                  "type": "string"
+                },
+                "username": {
+                  "description": "Username used for BMC/IPMI functionality.",
+                  "type": "string"
+                },
+                "virtual": {
+                  "description": "Whether or not this is a virtual interface.",
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "manage_power_operations": {
+            "description": "Manage power operations, e.g. power on, if host's build flag will be enabled.",
+            "type": "boolean"
+          },
+          "managed": {
+            "description": "Whether or not this host is managed by Foreman. Create host only, don't set build status or manage power states.",
+            "type": "boolean"
+          },
+          "medium_id": {
+            "description": "ID of the medium mounted on the host.",
+            "type": "number"
+          },
+          "model_id": {
+            "description": "ID of the hardware model if applicable",
+            "type": "number"
+          },
+          "name": {
+            "description": "The host's short name, a DNS label.",
+            "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+            "type": "string"
+          },
+          "operatingsystem_id": {
+            "description": "ID of the operating system to put on the host.",
+            "type": "number"
+          },
+          "owner_id": {
+            "description": "ID of the user or usergroup that owns the host.",
+            "type": "number"
+          },
+          "owner_type": {
+            "description": "Owner of the host, must be either User ot Usergroup",
+            "enum": [
+              "User",
+              "Usergroup"
+            ],
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "A map of parameters that will be saved as host parameters in the machine config.",
+            "type": "object"
+          },
+          "provision_method": {
+            "description": "Sets the provision method in Foreman for this host: either network-based ('build') or image-based ('image')",
+            "enum": [
+              "build",
+              "image"
+            ],
+            "type": "string"
+          },
+          "ptable_id": {
+            "description": "ID of the partition table the host should use",
+            "type": "number"
+          },
+          "puppet_class_ids": {
+            "description": "IDs of the applied puppet classes.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "subnet_id": {
+            "description": "ID of the subnet the host should be placed in",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "Hostgroup": {
+        "properties": {
+          "__meta__": {
+            "description": "@SUMMARY Hostgroups are organized in a tree-like structure and inherit values from their parent hostgroup(s). When hosts get associated with a hostgroup, it will inherit attributes from the hostgroup. This allows for easy, shared configuration of various hosts based on common attributes.",
+            "type": "boolean"
+          },
+          "architecture_id": {
+            "description": "ID of the architecture associated with this hostgroup.",
+            "type": "number"
+          },
+          "compute_profile_id": {
+            "description": "ID of the compute profile associated with this hostgroup.",
+            "type": "number"
+          },
+          "compute_resource_id": {
+            "description": "ID of the compute resource associated with this hostgroup.",
+            "type": "number"
+          },
+          "config_group_ids": {
+            "description": "IDs of the applied config groups.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "content_source_id": {
+            "description": "ID of the content source associated with this hostgroup.",
+            "type": "number"
+          },
+          "content_view_id": {
+            "description": "ID of the content view associated with this hostgroup.",
+            "type": "number"
+          },
+          "domain_id": {
+            "description": "ID of the domain associated with this hostgroup.",
+            "type": "number"
+          },
+          "environment_id": {
+            "description": "ID of the environment associated with this hostgroup.",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lifecycle_environment_id": {
+            "description": "ID of the lifecycle environment associated with this hostgroup.",
+            "type": "number"
+          },
+          "medium_id": {
+            "description": "ID of the media associated with this hostgroup.",
+            "type": "number"
+          },
+          "name": {
+            "description": "Hostgroup name. @EXAMPLE \"compute\"",
+            "type": "string"
+          },
+          "operatingsystem_id": {
+            "description": "ID of the operating system associated with this hostgroup.",
+            "type": "number"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "A map of parameters that will be saved as hostgroup parameters in the group config.",
+            "type": "object"
+          },
+          "parent_id": {
+            "description": "ID of the parent hostgroup.",
+            "type": "number"
+          },
+          "ptable_id": {
+            "description": "ID of the partition table associated with this hostgroup.",
+            "type": "number"
+          },
+          "puppet_ca_proxy_id": {
+            "description": "ID of the smart proxy acting as the puppet certificate authority server for this hostgroup.",
+            "type": "number"
+          },
+          "puppet_class_ids": {
+            "description": "IDs of the applied puppet classes.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "puppet_proxy_id": {
+            "description": "ID of the smart proxy acting as the puppet proxy server for this hostgroup.",
+            "type": "number"
+          },
+          "pxe_loader": {
+            "description": "Operating system family. Value examples: \"None\", \"PXELinux BIOS\", \"PXELinux UEFI\", \"Grub UEFI\", \"Grub2 UEFI\", \"Grub2 UEFI SecureBoot\", \"Grub2 UEFI HTTP\", \"Grub2 UEFI HTTPS\", \"Grub2 UEFI HTTPS SecureBoot\", \"iPXE Embedded\", \"iPXE UEFI HTTP\", \"iPXE Chain BIOS\", \"iPXE Chain UEFI\"",
+            "type": "string"
+          },
+          "realm_id": {
+            "description": "ID of the realm associated with this hostgroup.",
+            "type": "number"
+          },
+          "subnet_id": {
+            "description": "ID of the subnet associated with the hostgroup.",
+            "type": "number"
+          },
+          "title": {
+            "description": "The title is the fullname of the hostgroup.  A hostgroup's title is a path-like string from the head of the hostgroup tree down to this hostgroup.  The title will be in the form of: \"\u003cparent 1\u003e/\u003cparent 2\u003e/.../\u003cname\u003e\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "HostgroupSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "architecture_id": {
+            "description": "ID of the architecture associated with this hostgroup.",
+            "type": "number"
+          },
+          "compute_profile_id": {
+            "description": "ID of the compute profile associated with this hostgroup.",
+            "type": "number"
+          },
+          "compute_resource_id": {
+            "description": "ID of the compute resource associated with this hostgroup.",
+            "type": "number"
+          },
+          "config_group_ids": {
+            "description": "IDs of the applied config groups.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "content_source_id": {
+            "description": "ID of the content source associated with this hostgroup.",
+            "type": "number"
+          },
+          "content_view_id": {
+            "description": "ID of the content view associated with this hostgroup.",
+            "type": "number"
+          },
+          "domain_id": {
+            "description": "ID of the domain associated with this hostgroup.",
+            "type": "number"
+          },
+          "environment_id": {
+            "description": "ID of the environment associated with this hostgroup.",
+            "type": "number"
+          },
+          "lifecycle_environment_id": {
+            "description": "ID of the lifecycle environment associated with this hostgroup.",
+            "type": "number"
+          },
+          "medium_id": {
+            "description": "ID of the media associated with this hostgroup.",
+            "type": "number"
+          },
+          "name": {
+            "description": "Hostgroup name. @EXAMPLE \"compute\"",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._-]{0,62}$",
+            "type": "string"
+          },
+          "operatingsystem_id": {
+            "description": "ID of the operating system associated with this hostgroup.",
+            "type": "number"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "A map of parameters that will be saved as hostgroup parameters in the group config.",
+            "type": "object"
+          },
+          "parent_id": {
+            "description": "ID of the parent hostgroup.",
+            "type": "number"
+          },
+          "ptable_id": {
+            "description": "ID of the partition table associated with this hostgroup.",
+            "type": "number"
+          },
+          "puppet_ca_proxy_id": {
+            "description": "ID of the smart proxy acting as the puppet certificate authority server for this hostgroup.",
+            "type": "number"
+          },
+          "puppet_class_ids": {
+            "description": "IDs of the applied puppet classes.",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "puppet_proxy_id": {
+            "description": "ID of the smart proxy acting as the puppet proxy server for this hostgroup.",
+            "type": "number"
+          },
+          "pxe_loader": {
+            "description": "Operating system family. Value examples: \"None\", \"PXELinux BIOS\", \"PXELinux UEFI\", \"Grub UEFI\", \"Grub2 UEFI\", \"Grub2 UEFI SecureBoot\", \"Grub2 UEFI HTTP\", \"Grub2 UEFI HTTPS\", \"Grub2 UEFI HTTPS SecureBoot\", \"iPXE Embedded\", \"iPXE UEFI HTTP\", \"iPXE Chain BIOS\", \"iPXE Chain UEFI\"",
+            "type": "string"
+          },
+          "realm_id": {
+            "description": "ID of the realm associated with this hostgroup.",
+            "type": "number"
+          },
+          "subnet_id": {
+            "description": "ID of the subnet associated with the hostgroup.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "Problem": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Subnet": {
+        "properties": {
+          "__meta__": {
+            "description": "@SUMMARY Foreman representation of a subnetwork.",
+            "type": "boolean"
+          },
+          "bmc_id": {
+            "description": "BMC Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "boot_mode": {
+            "description": "Default boot mode for instances assigned to this subnet. Values include: `\"Static\"`, `\"DHCP\"`.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Description of the subnet",
+            "type": "string"
+          },
+          "dhcp_id": {
+            "description": "DHCP Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "dns_primary": {
+            "description": "Primary DNS server for this subnet.",
+            "type": "string"
+          },
+          "dns_secondary": {
+            "description": "Secondary DNS sever for this subnet.",
+            "type": "string"
+          },
+          "domain_ids": {
+            "description": "Domains in which this subnet is part",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "from": {
+            "description": "Start IP address for IP auto suggestion.",
+            "type": "string"
+          },
+          "gateway": {
+            "description": "Gateway server to use when connecting/communicating to anything not on the same network.",
+            "type": "string"
+          },
+          "httpboot_id": {
+            "description": "HTTPBoot Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ipam": {
+            "description": "IP address auto-suggestion for this subnet. Valid values include: `\"DHCP\"`, `\"Internal DB\"`, `\"Random DB\"`,`\"None\"`.",
+            "type": "string"
+          },
+          "mask": {
+            "description": "Netmask for this subnet. @EXAMPLE \"255.255.255.0\"",
+            "type": "string"
+          },
+          "mtu": {
+            "description": "MTU value for the subnet",
+            "type": "number"
+          },
+          "name": {
+            "description": "Subnet name. @EXAMPLE \"10.228.247.0 BO1\"",
+            "type": "string"
+          },
+          "network": {
+            "description": "Subnet network. @EXAMPLE \"10.228.247.0\"",
+            "type": "string"
+          },
+          "network_address": {
+            "description": "The Subnets CIDR in the format 169.254.0.0/16",
+            "type": "string"
+          },
+          "network_type": {
+            "description": "Type or protocol, IPv4 or IPv6, defaults to IPv4.",
+            "type": "string"
+          },
+          "template_id": {
+            "description": "Template HTTP(S) Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "tftp_id": {
+            "description": "TFTP Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "to": {
+            "description": "Ending IP address for IP auto suggestion.",
+            "type": "string"
+          },
+          "vlanid": {
+            "description": "VLAN id that is in use in the subnet",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SubnetSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "bmc_id": {
+            "description": "BMC Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "boot_mode": {
+            "description": "Default boot mode for instances assigned to this subnet. Values include: `\"Static\"`, `\"DHCP\"`.",
+            "enum": [
+              "DHCP",
+              "Static"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "description": "Description of the subnet",
+            "type": "string"
+          },
+          "dhcp_id": {
+            "description": "DHCP Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "dns_primary": {
+            "description": "Primary DNS server for this subnet.",
+            "type": "string"
+          },
+          "dns_secondary": {
+            "description": "Secondary DNS sever for this subnet.",
+            "type": "string"
+          },
+          "domain_ids": {
+            "description": "Domains in which this subnet is part",
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "from": {
+            "description": "Start IP address for IP auto suggestion.",
+            "type": "string"
+          },
+          "gateway": {
+            "description": "Gateway server to use when connecting/communicating to anything not on the same network.",
+            "type": "string"
+          },
+          "httpboot_id": {
+            "description": "HTTPBoot Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "ipam": {
+            "description": "IP address auto-suggestion for this subnet. Valid values include: `\"DHCP\"`, `\"Internal DB\"`, `\"Random DB\"`,`\"None\"`.",
+            "enum": [
+              "DHCP",
+              "Internal DB",
+              "None",
+              "Random DB"
+            ],
+            "type": "string"
+          },
+          "mask": {
+            "description": "Netmask for this subnet. @EXAMPLE \"255.255.255.0\"",
+            "type": "string"
+          },
+          "mtu": {
+            "description": "MTU value for the subnet",
+            "type": "number"
+          },
+          "name": {
+            "description": "Subnet name. @EXAMPLE \"10.228.247.0 BO1\"",
+            "type": "string"
+          },
+          "network": {
+            "description": "Subnet network. @EXAMPLE \"10.228.247.0\"",
+            "type": "string"
+          },
+          "network_address": {
+            "description": "The Subnets CIDR in the format 169.254.0.0/16",
+            "type": "string"
+          },
+          "network_type": {
+            "description": "Type or protocol, IPv4 or IPv6, defaults to IPv4.",
+            "enum": [
+              "IPv4",
+              "IPv6"
+            ],
+            "type": "string"
+          },
+          "template_id": {
+            "description": "Template HTTP(S) Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "tftp_id": {
+            "description": "TFTP Proxy ID to use within this subnet",
+            "type": "number"
+          },
+          "to": {
+            "description": "Ending IP address for IP auto suggestion.",
+            "type": "string"
+          },
+          "vlanid": {
+            "description": "802.1Q VLAN id, 1 to 4094.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "mask",
+          "name",
+          "network"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Generated from the foreman provider's resource schemas.",
+    "title": "foreman resources",
+    "version": "v1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/foreman/v1/namespaces/{namespace}/domain": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        }
+      ],
+      "post": {
+        "description": "",
+        "operationId": "createDomain",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DomainSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Domain"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Create a foreman_domain",
+        "tags": [
+          "domain"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/domain/{id}": {
+      "delete": {
+        "operationId": "deleteDomain",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Delete a foreman_domain",
+        "tags": [
+          "domain"
+        ]
+      },
+      "get": {
+        "operationId": "getDomain",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Domain"
+                }
+              }
+            },
+            "description": "The resource"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Read a foreman_domain as the provider sees it now",
+        "tags": [
+          "domain"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        },
+        {
+          "$ref": "#/components/parameters/id"
+        }
+      ],
+      "put": {
+        "operationId": "updateDomain",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DomainSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Domain"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Update a foreman_domain",
+        "tags": [
+          "domain"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/host": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        }
+      ],
+      "post": {
+        "description": "",
+        "operationId": "createHost",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HostSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Host"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Create a foreman_host",
+        "tags": [
+          "host"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/host/{id}": {
+      "delete": {
+        "operationId": "deleteHost",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Delete a foreman_host",
+        "tags": [
+          "host"
+        ]
+      },
+      "get": {
+        "operationId": "getHost",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Host"
+                }
+              }
+            },
+            "description": "The resource"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Read a foreman_host as the provider sees it now",
+        "tags": [
+          "host"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        },
+        {
+          "$ref": "#/components/parameters/id"
+        }
+      ],
+      "put": {
+        "operationId": "updateHost",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HostSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Host"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Update a foreman_host",
+        "tags": [
+          "host"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/hostgroup": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        }
+      ],
+      "post": {
+        "description": "",
+        "operationId": "createHostgroup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HostgroupSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hostgroup"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Create a foreman_hostgroup",
+        "tags": [
+          "hostgroup"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/hostgroup/{id}": {
+      "delete": {
+        "operationId": "deleteHostgroup",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Delete a foreman_hostgroup",
+        "tags": [
+          "hostgroup"
+        ]
+      },
+      "get": {
+        "operationId": "getHostgroup",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hostgroup"
+                }
+              }
+            },
+            "description": "The resource"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Read a foreman_hostgroup as the provider sees it now",
+        "tags": [
+          "hostgroup"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        },
+        {
+          "$ref": "#/components/parameters/id"
+        }
+      ],
+      "put": {
+        "operationId": "updateHostgroup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HostgroupSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hostgroup"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Update a foreman_hostgroup",
+        "tags": [
+          "hostgroup"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/subnet": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        }
+      ],
+      "post": {
+        "description": "",
+        "operationId": "createSubnet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubnetSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subnet"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Create a foreman_subnet",
+        "tags": [
+          "subnet"
+        ]
+      }
+    },
+    "/foreman/v1/namespaces/{namespace}/subnet/{id}": {
+      "delete": {
+        "operationId": "deleteSubnet",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Delete a foreman_subnet",
+        "tags": [
+          "subnet"
+        ]
+      },
+      "get": {
+        "operationId": "getSubnet",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subnet"
+                }
+              }
+            },
+            "description": "The resource"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Read a foreman_subnet as the provider sees it now",
+        "tags": [
+          "subnet"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/namespace"
+        },
+        {
+          "$ref": "#/components/parameters/id"
+        }
+      ],
+      "put": {
+        "operationId": "updateSubnet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubnetSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subnet"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "summary": "Update a foreman_subnet",
+        "tags": [
+          "subnet"
+        ]
+      }
+    }
+  }
+}

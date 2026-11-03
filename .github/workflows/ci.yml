@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install lint and security tools
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+
+      - name: Format
+        run: make fmt
+
+      - name: Check formatting
+        run: git diff --exit-code
+
+      - name: Lint
+        run: make lint
+
+      - name: Security
+        run: make security
+
+      - name: Test
+        run: make test
+
+      - name: Check the release configuration
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: check
+
+  # On main: go-semantic-release makes the version, its tag and the GitHub
+  # release from the conventional commits; GoReleaser then adds the binaries
+  # and the RPM and DEB packages to that release.
+  release:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: go-semantic-release/action@v1
+        id: semrel
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          allow-initial-development-versions: true
+
+      - name: Fetch the new tag
+        if: steps.semrel.outputs.version != ''
+        run: git fetch --tags --force
+
+      - uses: actions/setup-go@v7
+        if: steps.semrel.outputs.version != ''
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Add the files to the release
+        if: steps.semrel.outputs.version != ''
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,91 @@
+version: 2
+
+project_name: tofu-api
+
+builds:
+  - id: tofu-api
+    binary: tofu-api
+    env:
+      - CGO_ENABLED=0
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+
+archives:
+  - formats: [tar.gz]
+    files:
+      - LICENSE
+      - README.md
+      - examples/**/*
+      - packaging/tofu-api@.service
+      - packaging/example.env
+      - packaging/example.secrets
+
+nfpms:
+  - id: default
+    package_name: tofu-api
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: InfraPI
+    homepage: https://github.com/infrapi/tofu-api
+    maintainer: InfraPI <https://github.com/infrapi>
+    description: REST API over an OpenTofu-protocol provider, an instance per provider.
+    license: MIT
+    formats: [rpm, deb]
+    bindir: /usr/bin
+    contents:
+      - src: packaging/tofu-api@.service
+        dst: /usr/lib/systemd/system/tofu-api@.service
+        file_info:
+          mode: 0644
+      # A provider's files: <provider>.yaml, .env, .secrets; none is shipped.
+      - dst: /etc/tofu-api
+        type: dir
+        file_info:
+          mode: 0750
+          owner: root
+          group: tofu-api
+      - src: README.md
+        dst: /usr/share/doc/tofu-api/README.md
+        type: doc
+        file_info:
+          mode: 0644
+      - src: LICENSE
+        dst: /usr/share/doc/tofu-api/LICENSE
+        type: doc
+        file_info:
+          mode: 0644
+      - src: packaging/example.env
+        dst: /usr/share/doc/tofu-api/examples/example.env
+        type: doc
+        file_info:
+          mode: 0644
+      - src: packaging/example.secrets
+        dst: /usr/share/doc/tofu-api/examples/example.secrets
+        type: doc
+        file_info:
+          mode: 0644
+    scripts:
+      preinstall: packaging/preinstall.sh
+      postinstall: packaging/postinstall.sh
+      preremove: packaging/preremove.sh
+      postremove: packaging/postremove.sh
+    rpm:
+      group: System Environment/Daemons
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# The release itself, and its notes, are go-semantic-release's: this adds the
+# files to it.
+release:
+  github:
+    owner: infrapi
+    name: tofu-api
+  mode: keep-existing
+
+changelog:
+  disable: true
