@@ -66,13 +66,12 @@ over them. Another provider is another file, and no code:
 
 [`examples/foreman/foreman.yaml`](examples/foreman/foreman.yaml) exposes
 hosts, hostgroups, domains and subnets in Foreman, a namespace per
-organization; its contract is
-[`foreman-v1.json`](examples/foreman/foreman-v1.json).
+organization.
 
 ```bash
 scripts/fetch-provider.sh terraform-coop/foreman 0.7.0   # prints the binary path, for provider.binary_path
 
-# the contract only: no Foreman needed
+# the contract only, or a check of the file: no Foreman needed
 go run . gen -config examples/foreman/foreman.yaml -o foreman-v1.json
 
 # the API
@@ -306,8 +305,11 @@ schemas at start: a type the provider does not have, an unknown or computed
 attribute, an expression that does not compile or reads anything else stops
 the service.
 
-[`examples/foreman/foreman-v1.json`](examples/foreman/foreman-v1.json) is the
-contract the Foreman example generates, with its rules.
+No contract is kept in the repository: the service generates it at start
+from the file and the provider's schemas, and serves it at
+`/-/openapi/<provider>/v1.json` and in Swagger UI at `/-/docs`. `tofu-api gen`
+writes it without starting the service, or checks a file before it is
+deployed: it fails as the service would.
 
 ## Mapping
 
