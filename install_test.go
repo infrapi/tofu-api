@@ -228,6 +228,38 @@ func TestInstallRefusesAPathOutOfTheArchive(t *testing.T) {
 	assertEmptyCache(t, in)
 }
 
+func TestInstallVersionTheMirrorDoesNotHave(t *testing.T) {
+	// Artifactory answers {} for a version it does not have.
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte("{ }")); err != nil {
+			panic(err)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	in, _ := testInstaller(t, &mirror{})
+	u, err := url.Parse(srv.URL + "/providers/")
+	require.NoError(t, err)
+	in.cfg.MirrorURL, in.client = u, srv.Client()
+	_, err = in.install(context.Background(), thing, "1.2.2")
+	assert.ErrorContains(t, err, "provider registry.terraform.io/example/thing 1.2.2: the mirror has no such version")
+	assertEmptyCache(t, in)
+}
+
+func TestInstallOtherPlatformsOnly(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(`{"archives": {"plan9_386": {"url": "x.zip"}, "aix_ppc64": {"url": "y.zip"}}}`)); err != nil {
+			panic(err)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	in, _ := testInstaller(t, &mirror{})
+	u, err := url.Parse(srv.URL + "/providers/")
+	require.NoError(t, err)
+	in.cfg.MirrorURL, in.client = u, srv.Client()
+	_, err = in.install(context.Background(), thing, "1.2.0")
+	assert.ErrorContains(t, err, "the mirror has it for aix_ppc64, plan9_386 only, not "+runtime.GOOS+"_"+runtime.GOARCH)
+}
+
 func TestInstallUnknownVersion(t *testing.T) {
 	in, _ := testInstaller(t, &mirror{})
 	_, err := in.install(context.Background(), thing, "9.9.9")

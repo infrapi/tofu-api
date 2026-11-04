@@ -11,12 +11,14 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -261,7 +263,11 @@ func (in *installer) download(ctx context.Context, src providerSource, version, 
 	}
 	archive, ok := doc.Archives[platform]
 	if !ok {
-		return fmt.Errorf("%s: no archive for %s", versionURL.Redacted(), platform)
+		if len(doc.Archives) == 0 {
+			return fmt.Errorf("the mirror has no such version (%s has no archive)", versionURL.Redacted())
+		}
+		platforms := slices.Sorted(maps.Keys(doc.Archives))
+		return fmt.Errorf("the mirror has it for %s only, not %s (%s)", strings.Join(platforms, ", "), platform, versionURL.Redacted())
 	}
 	archiveURL, err := versionURL.Parse(archive.URL)
 	if err != nil {
