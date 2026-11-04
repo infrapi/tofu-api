@@ -16,6 +16,11 @@ Environment=INFRAPI_CONFIG_DOTENV_FILE=/etc/tofu-api/%i.env
 # What ${VAR} in the provider's file reads, such as a provider's URL
 # or VAULT_ROLE_ID: root-only, read by systemd.
 EnvironmentFile=-/etc/tofu-api/%i.secrets
+# Where a provider named by source is installed from and to: Terraform's CLI
+# configuration, its plugin_cache_dir under the state directory, which
+# systemd creates, keeps the service's, and leaves writable.
+Environment=TF_CLI_CONFIG_FILE=/etc/tofu-api/terraformrc
+StateDirectory=tofu-api
 ExecStart=/usr/bin/tofu-api serve -config /etc/tofu-api/%i.yaml
 Restart=on-failure
 RestartSec=2s

@@ -60,6 +60,12 @@ func run(args []string) (err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	if f.Provider.Source != "" {
+		if f.Provider.BinaryPath, err = installProvider(ctx, f.Provider); err != nil {
+			return err
+		}
+	}
+
 	a, contract, err := generate(ctx, f, *path)
 	if err != nil {
 		return err

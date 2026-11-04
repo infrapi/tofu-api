@@ -6,6 +6,7 @@ require (
 	cel.dev/cel-go v0.33.0
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/gin-gonic/gin v1.12.0
+	github.com/hashicorp/hcl v1.0.0
 	github.com/infrapi/lib v0.9.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/stretchr/testify v1.12.1

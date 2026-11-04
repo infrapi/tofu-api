@@ -65,8 +65,13 @@ type apiConfig struct {
 }
 
 type providerConfig struct {
-	// BinaryPath is the provider's plugin binary.
+	// BinaryPath is the provider's plugin binary; or Source and Version.
 	BinaryPath string `yaml:"binary_path"`
+	// Source, [host/]namespace/type, and Version name a provider installed
+	// as terraform init installs it, from Terraform's CLI configuration:
+	// from its plugin_cache_dir, or its network_mirror into it.
+	Source  string `yaml:"source"`
+	Version string `yaml:"version"`
 	// Name is {provider} in the API's paths, and the prefix stripped from
 	// resource type names; terraform-provider-example_v1.2.0 is example
 	// unless set.
@@ -157,8 +162,22 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 	if err := dec.Decode(&f); err != nil && !errors.Is(err, io.EOF) {
 		return configFile{}, fmt.Errorf("%s: %w", filename, err)
 	}
-	if f.Provider.BinaryPath == "" {
-		return configFile{}, fmt.Errorf("%s: provider.binary_path is required", filename)
+	switch p := f.Provider; {
+	case p.BinaryPath == "" && p.Source == "":
+		return configFile{}, fmt.Errorf("%s: provider.binary_path, or provider.source and provider.version, is required", filename)
+	case p.BinaryPath != "" && (p.Source != "" || p.Version != ""):
+		return configFile{}, fmt.Errorf("%s: provider.binary_path, or provider.source and provider.version, not both", filename)
+	case p.Source != "":
+		src, err := parseSource(p.Source)
+		if err != nil {
+			return configFile{}, fmt.Errorf("%s: provider.%w", filename, err)
+		}
+		if !providerVersion.MatchString(p.Version) {
+			return configFile{}, fmt.Errorf("%s: provider.version %q: want an exact version, such as 1.2.0", filename, p.Version)
+		}
+		if f.Provider.Name == "" {
+			f.Provider.Name = src.Type
+		}
 	}
 	if f.Provider.Name == "" {
 		f.Provider.Name = providerName(f.Provider.BinaryPath)
@@ -284,6 +303,9 @@ func (f configFile) typeNames() []string {
 }
 
 var pluginName = regexp.MustCompile(`^terraform-provider-([a-z0-9-]+)`)
+
+// providerVersion is an exact version, as a provider's releases name them.
+var providerVersion = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$`)
 
 // providerName is the provider's name, as its binary's name says it:
 // terraform-provider-example_v1.2.0 is example.
