@@ -3,7 +3,7 @@ module github.com/infrapi/tofu-api
 go 1.26.7
 
 require (
-	cel.dev/cel-go v0.33.0
+	cel.dev/cel-go v0.33.2
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hashicorp/hcl v1.0.0
