@@ -68,7 +68,7 @@ func testAPI(t *testing.T) *api {
 	types := map[string]tofu.Block{"grafana_folder": folder}
 	rs, errs, err := testParseRules(testRules, types)
 	require.NoError(t, err)
-	return &api{provider: "grafana", basePath: "/grafana/v1/namespaces/{namespace}", types: types, rules: rs, errors: errs}
+	return &api{provider: "grafana", basePath: "/grafana/v1/namespaces/{namespace}", namespacePattern: defaultNamespacePattern, types: types, rules: rs, errors: errs}
 }
 
 func TestSpecSchema(t *testing.T) {
@@ -210,4 +210,12 @@ func TestBasePath(t *testing.T) {
 	paths := a.document()["paths"].(object)
 	assert.Contains(t, paths, "/infra/{namespace}/stacks/folder")
 	assert.Contains(t, paths, "/infra/{namespace}/stacks/folder/{id}")
+}
+
+// The namespace parameter has the configured pattern.
+func TestNamespacePattern(t *testing.T) {
+	a := testAPI(t)
+	a.namespacePattern = `^[A-Za-z0-9.]+$`
+	parameters := a.document()["components"].(object)["parameters"].(object)
+	assert.Equal(t, `^[A-Za-z0-9.]+$`, parameters["namespace"].(object)["schema"].(object)["pattern"])
 }

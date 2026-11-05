@@ -98,7 +98,7 @@ func build(f configFile, filename string, p schemaSource) (*api, []byte, error) 
 	if err != nil {
 		return nil, nil, err
 	}
-	a := &api{provider: f.Provider.Name, basePath: f.API.BasePath, types: schemas}
+	a := &api{provider: f.Provider.Name, basePath: f.API.BasePath, namespacePattern: f.API.NamespacePattern, types: schemas}
 	if a.rules, a.errors, err = parseRules(f, filename, schemas); err != nil {
 		return nil, nil, err
 	}

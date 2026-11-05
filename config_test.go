@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -168,5 +170,29 @@ func TestParseConfigBasePath(t *testing.T) {
 	} {
 		_, err := parseConfig(src(basePath), "grafana.yaml")
 		assert.ErrorContains(t, err, "api.base_path", name)
+	}
+}
+
+func TestParseConfigNamespacePattern(t *testing.T) {
+	src := func(pattern string) []byte {
+		return fmt.Appendf(nil, "api:\n  namespace_pattern: %q\nprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\ntypes:\n  grafana_folder: {}\n", pattern)
+	}
+	for pattern, want := range map[string]string{
+		"":                defaultNamespacePattern,
+		`^[A-Za-z0-9.]+$`: `^[A-Za-z0-9.]+$`,
+	} {
+		f, err := parseConfig(src(pattern), "grafana.yaml")
+		require.NoError(t, err, pattern)
+		assert.Equal(t, want, f.API.NamespacePattern)
+	}
+	_, err := parseConfig(src(`^[a-z`), "grafana.yaml")
+	assert.ErrorContains(t, err, "api.namespace_pattern")
+
+	re := regexp.MustCompile(defaultNamespacePattern)
+	for _, ns := range []string{"core", "testv4_sandbox", "team-a", "0"} {
+		assert.True(t, re.MatchString(ns), ns)
+	}
+	for _, ns := range []string{"", "Core", "-a", "_a", "a/b", "a.b", strings.Repeat("a", 64)} {
+		assert.False(t, re.MatchString(ns), ns)
 	}
 }

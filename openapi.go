@@ -17,9 +17,11 @@ type object = map[string]any
 type api struct {
 	provider string
 	basePath string
-	types    map[string]tofu.Block
-	rules    rules
-	errors   []errorRule
+	// namespacePattern is the namespace parameter's pattern.
+	namespacePattern string
+	types            map[string]tofu.Block
+	rules            rules
+	errors           []errorRule
 }
 
 // segment is the path segment of a resource type: example_project → project.
@@ -139,7 +141,7 @@ func (a *api) document() object {
 			"parameters": object{
 				"namespace": object{
 					"name": "namespace", "in": "path", "required": true,
-					"schema": object{"type": "string", "pattern": `^[a-z0-9][a-z0-9-]{0,62}$`},
+					"schema": object{"type": "string", "pattern": a.namespacePattern},
 				},
 				"id": object{
 					"name": "id", "in": "path", "required": true,

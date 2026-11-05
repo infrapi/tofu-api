@@ -150,6 +150,7 @@ systemctl enable --now tofu-api@foreman
 ```yaml
 # api:
 #   base_path: /{provider}/v1/namespaces/{namespace}   # the paths' start, as by default; {namespace} is required
+#   namespace_pattern: '^[a-z0-9][a-z0-9_-]{0,62}$'    # what a namespace matches, as by default; anchored
 provider:
   source: terraform-coop/foreman   # [host/]namespace/type, installed (see Providers)
   version: 0.7.0                   # exact
@@ -173,6 +174,12 @@ Server settings (address, logs) stay in `INFRAPI_*` variables, as for any
 service on the lib.
 
 ## Namespaces
+
+A namespace is the path's `{namespace}`: lower case letters, digits, `-` and
+`_` (`^[a-z0-9][a-z0-9_-]{0,62}$`) unless `api.namespace_pattern` says
+otherwise, such as `^[A-Za-z0-9_.-]{1,63}$`. Another is a 400. Keep `/` out of it: the namespace is also a
+segment of the path, and may end up in a Vault path or in an attribute
+through a rule's `ns`.
 
 Without `namespaces`, one provider, configured once, serves every namespace: the
 namespaces share its credentials, and only rules keep them apart. With it,

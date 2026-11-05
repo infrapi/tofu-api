@@ -23,6 +23,7 @@ import (
 //
 //	api:
 //	  base_path: /{provider}/v1/namespaces/{namespace}   # as by default
+//	  namespace_pattern: '^[a-z0-9][a-z0-9_-]{0,62}$'    # as by default
 //	provider:
 //	  binary_path: providers/.../terraform-provider-example_v1.2.0
 //	  config:
@@ -54,7 +55,13 @@ type configFile struct {
 	Errors     []errorRuleSpec      `yaml:"errors"`
 }
 
-const defaultBasePath = "/{provider}/v1/namespaces/{namespace}"
+const (
+	defaultBasePath = "/{provider}/v1/namespaces/{namespace}"
+	// defaultNamespacePattern is lower case letters, digits, - and _, 63 at
+	// most: the namespace may end up in a Vault path or mount, or, through a
+	// rule's ns, in an attribute with a format of its own.
+	defaultNamespacePattern = `^[a-z0-9][a-z0-9_-]{0,62}$`
+)
 
 type apiConfig struct {
 	// BasePath is what the API's paths start with, before the resource type:
@@ -62,6 +69,10 @@ type apiConfig struct {
 	// provider's name; {namespace}, a whole segment, is required: it picks
 	// the provider's credentials.
 	BasePath string `yaml:"base_path"`
+	// NamespacePattern is the regular expression a namespace matches, in the
+	// contract and so for every request: defaultNamespacePattern unless set. It is
+	// searched in the namespace, as OpenAPI does: anchor it.
+	NamespacePattern string `yaml:"namespace_pattern"`
 }
 
 type providerConfig struct {
@@ -194,6 +205,9 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 	if err := f.API.check(f.Provider.Name); err != nil {
 		return configFile{}, fmt.Errorf("%s: api.base_path: %w", filename, err)
 	}
+	if err := f.API.checkNamespacePattern(); err != nil {
+		return configFile{}, fmt.Errorf("%s: api.namespace_pattern: %w", filename, err)
+	}
 	if f.Namespaces != nil {
 		if err := f.Namespaces.check(); err != nil {
 			return configFile{}, fmt.Errorf("%s: namespaces: %w", filename, err)
@@ -214,6 +228,18 @@ func (p providerConfig) resolved(lookup func(string) (string, bool)) (map[string
 	}
 	m, _ := config.(map[string]any) // expand turns a map into a map
 	return m, nil
+}
+
+// checkNamespacePattern sets the namespace pattern, and refuses one that
+// does not compile: the server compiles the contract's with Go's regexp too.
+func (a *apiConfig) checkNamespacePattern() error {
+	if a.NamespacePattern == "" {
+		a.NamespacePattern = defaultNamespacePattern
+	}
+	if _, err := regexp.Compile(a.NamespacePattern); err != nil {
+		return err
+	}
+	return nil
 }
 
 // check sets the base path, {provider} replaced, and refuses what would not
