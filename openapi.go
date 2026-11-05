@@ -208,12 +208,7 @@ func specSchema(b tofu.Block, rs map[string]rule, top bool) object {
 		if ruled {
 			r.apply(s)
 		}
-		if attr.Sensitive || attr.WriteOnly {
-			s["writeOnly"] = true
-			if s["type"] == "string" {
-				s["format"] = "password"
-			}
-		}
+		secret(s, attr)
 		props[name] = s
 		if attr.Usage == tofu.UsageRequired && (!ruled || r.Default == nil) {
 			req = append(req, name)
@@ -228,13 +223,29 @@ func specSchema(b tofu.Block, rs map[string]rule, top bool) object {
 	return closed(props, req)
 }
 
+// secret marks a sensitive or write-only attribute: a password field in
+// Swagger UI, and writeOnly for a write-only one, which the provider never
+// reports back.
+func secret(s object, attr tofu.Attribute) {
+	if !attr.Sensitive && !attr.WriteOnly {
+		return
+	}
+	if s["type"] == "string" {
+		s["format"] = "password"
+	}
+	if attr.WriteOnly {
+		s["writeOnly"] = true
+	}
+}
+
 // stateSchema is what the provider reports back: every attribute, sensitive
-// and hidden ones left out. rs are the rules of the resource type, nil inside
-// nested blocks.
+// ones included, which the caller may need (a token the provider creates);
+// write-only and hidden ones left out. rs are the rules of the resource type,
+// nil inside nested blocks.
 func stateSchema(b tofu.Block, rs map[string]rule) object {
 	props := object{}
 	for name, attr := range b.Attributes {
-		if attr.Sensitive || attr.WriteOnly || rs[name].Hidden {
+		if attr.WriteOnly || rs[name].Hidden {
 			continue
 		}
 		var s object
@@ -244,6 +255,7 @@ func stateSchema(b tofu.Block, rs map[string]rule) object {
 			s = typeSchema(attr.Type)
 		}
 		describe(s, attr)
+		secret(s, attr)
 		props[name] = s
 	}
 	for name, nb := range b.Blocks {

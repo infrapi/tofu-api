@@ -103,11 +103,12 @@ func TestLifecycle(t *testing.T) {
 	e := newTestEngine(t, p)
 	const collection = "/grafana/v1/namespaces/acme/folder"
 
-	code, body := do(t, e, http.MethodPost, collection, `{"title":"Ops","token":"s3cret"}`)
+	code, body := do(t, e, http.MethodPost, collection, `{"title":"Ops","token":"s3cret","key_wo":"k"}`)
 	require.Equal(t, http.StatusCreated, code)
 	id := body["id"].(string)
 	assert.Equal(t, "acme", p.objects[id]["org_id"], "fixed attribute, ${namespace} replaced")
-	assert.NotContains(t, body, "token", "sensitive values are not returned")
+	assert.Equal(t, "s3cret", body["token"], "sensitive values are returned, the caller may need them")
+	assert.NotContains(t, body, "key_wo", "write-only values are not")
 	assert.NotContains(t, body, "org_id", "hidden attributes are not returned")
 
 	code, body = do(t, e, http.MethodPut, collection+"/"+id, `{"title":"Operations"}`)

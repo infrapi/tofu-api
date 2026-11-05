@@ -327,12 +327,12 @@ func (h *handlers) config(t, namespace string, spec, prior map[string]any) (map[
 }
 
 // view is a resource as the API returns it: the provider's state, id
-// included, without sensitive values nor hidden attributes.
+// included, sensitive values too, without write-only nor hidden attributes.
 func (h *handlers) view(t string, res tofu.Resource) map[string]any {
 	b := h.api.types[t]
 	state := make(map[string]any, len(res.Attributes))
 	for k, v := range res.Attributes {
-		if a, ok := b.Attributes[k]; (ok && (a.Sensitive || a.WriteOnly)) || h.api.rules[t][k].Hidden {
+		if a, ok := b.Attributes[k]; (ok && a.WriteOnly) || h.api.rules[t][k].Hidden {
 			continue
 		}
 		state[k] = v

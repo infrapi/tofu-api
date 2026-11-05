@@ -24,6 +24,7 @@ var folder = tofu.Block{
 		"uid":    {Usage: tofu.UsageOptionalComputed, Type: cty.String},
 		"url":    {Usage: tofu.UsageComputed, Type: cty.String},
 		"token":  {Usage: tofu.UsageOptional, Type: cty.String, Sensitive: true},
+		"key_wo": {Usage: tofu.UsageOptional, Type: cty.String, Sensitive: true, WriteOnly: true},
 		"old":    {Usage: tofu.UsageOptional, Type: cty.Bool, Deprecated: true},
 		"labels": {Usage: tofu.UsageOptional, Type: cty.Map(cty.String)},
 		"tags":   {Usage: tofu.UsageOptional, Type: cty.Set(cty.String)},
@@ -81,7 +82,8 @@ func TestSpecSchema(t *testing.T) {
 	}
 	assert.Equal(t, []string{"permission", "title"}, s["required"])
 	assert.Equal(t, false, s["additionalProperties"])
-	assert.Equal(t, object{"type": "string", "writeOnly": true, "format": "password"}, props["token"])
+	assert.Equal(t, object{"type": "string", "format": "password"}, props["token"])
+	assert.Equal(t, object{"type": "string", "format": "password", "writeOnly": true}, props["key_wo"])
 	assert.Equal(t, true, specSchema(folder, nil, true)["properties"].(object)["old"].(object)["deprecated"])
 	assert.Equal(t, object{
 		"type":        "string",
@@ -103,7 +105,8 @@ func TestStateSchema(t *testing.T) {
 	props := stateSchema(folder, testAPI(t).rules["grafana_folder"])["properties"].(object)
 	assert.Contains(t, props, "url")
 	assert.Contains(t, props, "id")
-	assert.NotContains(t, props, "token")
+	assert.Equal(t, object{"type": "string", "format": "password"}, props["token"], "sensitive, returned")
+	assert.NotContains(t, props, "key_wo", "write-only: the provider never reports it")
 	assert.NotContains(t, props, "org_id", "hidden")
 	assert.NotContains(t, props, "old", "hidden")
 

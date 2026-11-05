@@ -400,7 +400,8 @@ deployed: it fails as the service would.
 | required | `required` | yes |
 | optional, optional+computed | optional | yes |
 | computed only, `id` | absent: sending one is a 400 | yes |
-| sensitive, write-only | `writeOnly`, `format: password` | absent |
+| sensitive | `format: password` | yes, `format: password`: the caller may need it, such as a token the provider creates |
+| write-only | `writeOnly`, `format: password` | absent: the provider never reports it |
 | deprecated | `deprecated: true` | `deprecated: true` |
 | nested block list/set | array, `minItems`/`maxItems`, `uniqueItems` for set | |
 | nested block map | object, `additionalProperties` | |
@@ -409,7 +410,9 @@ deployed: it fails as the service would.
 ## No state in the service
 
 A resource is returned flat, as the provider reports it, `id` included,
-without sensitive values or hidden attributes. The service keeps nothing; the caller keeps the id.
+sensitive values included, without write-only or hidden attributes (`hidden`
+keeps a sensitive one from the caller). The service keeps nothing, and logs
+no request or response body; the caller keeps the id.
 `GET`, `PUT` and `DELETE` on `/{id}` rebuild the state from the id by
 importing the resource from the provider, as `terraform import` does, then check that
 every attribute a `value` rule fixes has the namespace's value: an id from another
