@@ -69,6 +69,7 @@ hosts, hostgroups, domains and subnets in Foreman, a namespace per
 organization.
 
 ```bash
+go run . -h                                              # the commands; go run . gen -h, serve -h for their flags
 scripts/fetch-provider.sh terraform-coop/foreman 0.7.0   # prints the binary path, for provider.binary_path
 
 # the contract only, or a check of the file: no Foreman needed

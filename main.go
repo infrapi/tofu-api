@@ -4,8 +4,9 @@
 // and serves create/read/update/delete through pkg/tofu. One configuration
 // file per provider says which, and how (see configFile).
 //
-//	tofu-api gen   -config <provider>.yaml -o <provider>-v1.json
 //	tofu-api serve -config <provider>.yaml
+//	tofu-api gen   -config <provider>.yaml [-o <provider>-v1.json]
+//	tofu-api version
 //
 // The service keeps no state: the caller keeps the id a create returns.
 package main
@@ -16,10 +17,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -30,27 +33,110 @@ import (
 	"github.com/infrapi/lib/pkg/tofu"
 )
 
+const usage = `tofu-api serves resource types of a Terraform provider as a REST API,
+with the OpenAPI contract generated from their schemas.
+
+Usage:
+  tofu-api serve -config <provider>.yaml
+  tofu-api gen   -config <provider>.yaml [-o <file>]
+  tofu-api version
+
+Commands:
+  serve    serve the API of the configuration's provider
+  gen      check the configuration against the provider's schemas, and write
+           the contract the service would serve
+  version  print the version
+
+The configuration names the provider, by source and version or by
+binary_path, the resource types to expose and the rules over them (see the
+README). A provider named by source is installed from the network mirror of
+Terraform's CLI configuration, TF_CLI_CONFIG_FILE. serve reads its settings
+from the environment, INFRAPI_*.
+
+Run 'tofu-api <command> -h' for its flags.
+`
+
 func main() {
-	if err := run(os.Args[1:]); err != nil {
+	err := run(os.Args[1:], os.Stdout, os.Stderr)
+	switch {
+	case err == nil, errors.Is(err, flag.ErrHelp):
+	case errors.Is(err, errShown):
+		os.Exit(2)
+	case errors.As(err, new(usageError)):
+		fmt.Fprintln(os.Stderr, "tofu-api:", err)
+		os.Exit(2)
+	default:
 		fmt.Fprintln(os.Stderr, "tofu-api:", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string) (err error) {
-	if len(args) == 0 || (args[0] != "gen" && args[0] != "serve") {
-		return errors.New("usage: tofu-api gen|serve -config <provider>.yaml")
+// usageError is a command line tofu-api does not understand: exit 2.
+type usageError string
+
+func (e usageError) Error() string { return string(e) }
+
+// errShown is a usage error whose message and usage were already written.
+var errShown = errors.New("shown")
+
+func run(args []string, stdout, stderr io.Writer) (err error) {
+	if len(args) == 0 {
+		if _, err := fmt.Fprint(stderr, usage); err != nil {
+			return err
+		}
+		return errShown
 	}
 	cmd := args[0]
-
-	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
-	path := fs.String("config", "", "YAML file of the provider to run, the resource types to expose and the rules over them")
-	out := fs.String("o", "-", "gen: output file, - for stdout")
-	if err := fs.Parse(args[1:]); err != nil {
+	switch cmd {
+	case "-h", "-help", "--help", "help":
+		_, err := fmt.Fprint(stdout, usage)
 		return err
+	case "version", "-version", "--version":
+		_, err := fmt.Fprintln(stdout, "tofu-api", version())
+		return err
+	case "gen", "serve":
+	default:
+		return usageError(fmt.Sprintf("unknown command %q, run 'tofu-api -h' for the usage", cmd))
 	}
-	if *path == "" {
-		return errors.New("-config is required")
+
+	fs := flag.NewFlagSet("tofu-api "+cmd, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	path := fs.String("config", "", "the provider's configuration `file` (required)")
+	out := new(string)
+	if cmd == "gen" {
+		out = fs.String("o", "-", "where to write the contract: a `file`, or - for stdout")
+	}
+	header := "Usage: tofu-api serve -config <provider>.yaml\n\n" +
+		"Serves the API of the configuration's provider; settings from INFRAPI_*.\n\n"
+	if cmd == "gen" {
+		header = "Usage: tofu-api gen -config <provider>.yaml [-o <file>]\n\n" +
+			"Checks the configuration as serve does at start, against the provider's\n" +
+			"schemas, without its credentials, and writes the OpenAPI contract.\n\n"
+	}
+	// The flag package calls Usage without a way to fail: a failed write is
+	// returned once Parse is done.
+	var usageErr error
+	fs.Usage = func() {
+		if _, err := fmt.Fprint(fs.Output(), header); err != nil {
+			usageErr = err
+			return
+		}
+		fs.PrintDefaults()
+	}
+	if err := fs.Parse(args[1:]); err != nil {
+		switch {
+		case usageErr != nil:
+			return usageErr
+		case errors.Is(err, flag.ErrHelp):
+			return err
+		}
+		return errShown // the flag package wrote the error and the usage
+	}
+	switch {
+	case fs.NArg() > 0:
+		return usageError(fmt.Sprintf("%s: unexpected argument %q, run 'tofu-api %[1]s -h' for the usage", cmd, fs.Arg(0)))
+	case *path == "":
+		return usageError(fmt.Sprintf("%s: -config is required, run 'tofu-api %[1]s -h' for the usage", cmd))
 	}
 	f, err := readConfig(*path)
 	if err != nil {
@@ -72,12 +158,22 @@ func run(args []string) (err error) {
 	}
 	if cmd == "gen" {
 		if *out == "-" {
-			_, err := os.Stdout.Write(contract)
+			_, err := stdout.Write(contract)
 			return err
 		}
 		return os.WriteFile(*out, contract, 0o600) // #nosec G703 -- path given on the command line by the operator
 	}
 	return serve(ctx, f, a, contract)
+}
+
+// version is the module's version the binary was built from, as go build
+// records it: the tag, or (devel).
+func version() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "(unknown)"
+	}
+	return info.Main.Version
 }
 
 // generate reads the schemas from a provider started for that alone, with
