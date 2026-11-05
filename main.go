@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/infrapi/lib/pkg/auth"
 	"github.com/infrapi/lib/pkg/config"
 	"github.com/infrapi/lib/pkg/listener"
 	"github.com/infrapi/lib/pkg/logger"
@@ -194,7 +195,7 @@ func build(f configFile, filename string, p schemaSource) (*api, []byte, error) 
 	if err != nil {
 		return nil, nil, err
 	}
-	a := &api{provider: f.Provider.Name, basePath: f.API.BasePath, namespacePattern: f.API.NamespacePattern, types: schemas}
+	a := &api{provider: f.Provider.Name, basePath: f.API.BasePath, namespacePattern: f.API.NamespacePattern, types: schemas, bearer: f.Auth != nil}
 	if a.rules, a.errors, err = parseRules(f, filename, schemas); err != nil {
 		return nil, nil, err
 	}
@@ -233,11 +234,33 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	if isPool {
 		opts = append(opts, server.WithOperations(providersOperation))
 	}
+	var rbac *access
+	if f.Auth != nil {
+		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL})
+		if err != nil {
+			return err
+		}
+		// Every route added after the engine's own /-/ endpoints needs a
+		// token the service resolves.
+		opts = append(opts, server.WithAuth(client.Middleware()))
+		if *f.Auth.Authorize {
+			checker := client
+			if f.Auth.AuthorizeURL != f.Auth.URL {
+				// The RBAC on a service of its own; its decisions are
+				// never cached, whichever client asks.
+				if checker, err = auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.AuthorizeURL}); err != nil {
+					return err
+				}
+			}
+			rbac = &access{checker: checker, api: f.Auth.API}
+		}
+	}
 	engine, err := server.NewServerGin(cfg, opts...)
 	if err != nil {
 		return err
 	}
 	h := newHandlers(a, ps, f.Provider.Timeout)
+	h.access = rbac
 	h.routes(engine)
 	if isPool {
 		pl.routes(engine)

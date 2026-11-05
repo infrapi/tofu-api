@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -51,6 +52,7 @@ type configFile struct {
 	API        apiConfig            `yaml:"api"`
 	Provider   providerConfig       `yaml:"provider"`
 	Namespaces *namespacesConfig    `yaml:"namespaces"`
+	Auth       *authConfig          `yaml:"auth"`
 	Types      map[string]typeRules `yaml:"types"`
 	Errors     []errorRuleSpec      `yaml:"errors"`
 }
@@ -207,6 +209,11 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 	}
 	if err := f.API.checkNamespacePattern(); err != nil {
 		return configFile{}, fmt.Errorf("%s: api.namespace_pattern: %w", filename, err)
+	}
+	if f.Auth != nil {
+		if err := f.Auth.check(f.API.BasePath); err != nil {
+			return configFile{}, fmt.Errorf("%s: auth: %w", filename, err)
+		}
 	}
 	if f.Namespaces != nil {
 		if err := f.Namespaces.check(); err != nil {
@@ -389,4 +396,53 @@ func expand(v any, lookup func(string) (string, bool)) (any, error) {
 		return out, nil
 	}
 	return v, nil
+}
+
+// authConfig protects the API with the authentication service of
+// infrapi/lib's pkg/auth: every request needs a bearer token it resolves
+// (POST /oauth2/userinfo), and, unless authorize is false, its RBAC allows
+// the request's verb on the resource type in the namespace (pkg/auth's
+// AuthorizePath). The operational endpoints
+// under /-/ stay open.
+type authConfig struct {
+	// URL is the authentication service's, which resolves a token.
+	URL string `yaml:"url"`
+	// AuthorizeURL is the service the RBAC decides on: url unless set.
+	AuthorizeURL string `yaml:"authorize_url"`
+	// CacheTTL keeps a token's identity that long: 1h unless set, a
+	// negative value for none. The RBAC's decisions are never kept.
+	CacheTTL time.Duration `yaml:"cache_ttl"`
+	// Authorize asks the RBAC for every request: true unless set.
+	Authorize *bool `yaml:"authorize"`
+	// API is the API group the RBAC's rules name: the <group> of a
+	// base_path /apis/<group>/... unless set.
+	API string `yaml:"api"`
+}
+
+// check sets the defaults; basePath is api.base_path, {provider} replaced.
+func (a *authConfig) check(basePath string) error {
+	if a.AuthorizeURL == "" {
+		a.AuthorizeURL = a.URL
+	}
+	for name, v := range map[string]string{"url": a.URL, "authorize_url": a.AuthorizeURL} {
+		u, err := url.Parse(v)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+			return fmt.Errorf("%s %q: want an http(s) URL", name, v)
+		}
+	}
+	if a.Authorize == nil {
+		a.Authorize = new(bool)
+		*a.Authorize = true
+	}
+	if !*a.Authorize || a.API != "" {
+		return nil
+	}
+	if group, ok := strings.CutPrefix(basePath, "/apis/"); ok {
+		group, _, _ = strings.Cut(group, "/")
+		if group != "" && group != "{namespace}" {
+			a.API = group
+			return nil
+		}
+	}
+	return fmt.Errorf("api: required, the API group the RBAC's rules name: api.base_path %q does not start with /apis/<group>/", basePath)
 }

@@ -34,6 +34,8 @@ type handlers struct {
 	providers providers
 	// timeout bounds a change, which outlives its request.
 	timeout time.Duration
+	// access, when set, checks every request against the RBAC.
+	access *access
 }
 
 func newHandlers(a *api, ps providers, timeout time.Duration) *handlers {
@@ -43,10 +45,14 @@ func newHandlers(a *api, ps providers, timeout time.Duration) *handlers {
 func (h *handlers) routes(r gin.IRouter) {
 	for t := range h.api.types {
 		base := strings.NewReplacer("{namespace}", ":namespace").Replace(h.api.base(t))
-		r.POST(base, h.create(t))
-		r.GET(base+"/:id", h.get(t))
-		r.PUT(base+"/:id", h.update(t))
-		r.DELETE(base+"/:id", h.delete(t))
+		var guard []gin.HandlerFunc
+		if h.access != nil {
+			guard = []gin.HandlerFunc{h.authorize(t)}
+		}
+		r.POST(base, append(guard, h.create(t))...)
+		r.GET(base+"/:id", append(guard, h.get(t))...)
+		r.PUT(base+"/:id", append(guard, h.update(t))...)
+		r.DELETE(base+"/:id", append(guard, h.delete(t))...)
 	}
 }
 

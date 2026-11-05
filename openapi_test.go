@@ -123,7 +123,15 @@ func TestTypeSchema(t *testing.T) {
 
 // The server refuses to start on a contract kin-openapi rejects.
 func TestDocumentIsValidOpenAPI(t *testing.T) {
-	raw, err := json.Marshal(testAPI(t).document())
+	bearer := testAPI(t)
+	bearer.bearer = true
+	raw, err := json.Marshal(bearer.document())
+	require.NoError(t, err)
+	withAuth, err := openapi3.NewLoader().LoadFromData(raw)
+	require.NoError(t, err)
+	require.NoError(t, withAuth.Validate(context.Background()), "with auth")
+
+	raw, err = json.Marshal(testAPI(t).document())
 	require.NoError(t, err)
 	doc, err := openapi3.NewLoader().LoadFromData(raw)
 	require.NoError(t, err)
@@ -218,4 +226,15 @@ func TestNamespacePattern(t *testing.T) {
 	a.namespacePattern = `^[A-Za-z0-9.]+$`
 	parameters := a.document()["components"].(object)["parameters"].(object)
 	assert.Equal(t, `^[A-Za-z0-9.]+$`, parameters["namespace"].(object)["schema"].(object)["pattern"])
+}
+
+// With auth, every operation needs a bearer token; without, none.
+func TestBearer(t *testing.T) {
+	a := testAPI(t)
+	assert.NotContains(t, a.document(), "security")
+	a.bearer = true
+	doc := a.document()
+	assert.Equal(t, []any{object{"bearer": []string{}}}, doc["security"])
+	schemes := doc["components"].(object)["securitySchemes"].(object)
+	assert.Equal(t, "bearer", schemes["bearer"].(object)["scheme"])
 }

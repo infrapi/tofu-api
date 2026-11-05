@@ -19,9 +19,11 @@ type api struct {
 	basePath string
 	// namespacePattern is the namespace parameter's pattern.
 	namespacePattern string
-	types            map[string]tofu.Block
-	rules            rules
-	errors           []errorRule
+	// bearer: every operation needs a bearer token (auth).
+	bearer bool
+	types  map[string]tofu.Block
+	rules  rules
+	errors []errorRule
 }
 
 // segment is the path segment of a resource type: example_project → project.
@@ -128,7 +130,7 @@ func (a *api) document() object {
 		}
 	}
 
-	return object{
+	doc := object{
 		"openapi": "3.0.3",
 		"info": object{
 			"title":       a.provider + " resources",
@@ -157,6 +159,17 @@ func (a *api) document() object {
 			},
 		},
 	}
+	if a.bearer {
+		components := doc["components"].(object)
+		components["securitySchemes"] = object{
+			"bearer": object{
+				"type": "http", "scheme": "bearer",
+				"description": "A token of the authentication service; the RBAC decides what it may do, per namespace and resource type.",
+			},
+		}
+		doc["security"] = []any{object{"bearer": []string{}}}
+	}
+	return doc
 }
 
 func ref(name string) object {
