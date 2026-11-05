@@ -204,17 +204,12 @@ func TestParseConfigAuth(t *testing.T) {
 	f, err := parseConfig(src("/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: https://auth.example.com\n"), "grafana.yaml")
 	require.NoError(t, err)
 	assert.True(t, *f.Auth.Authorize, "the RBAC is asked unless authorize is false")
-	assert.Equal(t, "https://auth.example.com", f.Auth.AuthorizeURL, "the RBAC on the same service unless set")
 	assert.Equal(t, "grafana.example.com", f.Auth.API, "the group of base_path")
 
 	f, err = parseConfig(src("/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  api: grafana.example.com\n  cache_ttl: 5m\n"), "grafana.yaml")
 	require.NoError(t, err)
 	assert.Equal(t, "grafana.example.com", f.Auth.API)
 	assert.Equal(t, 5*time.Minute, f.Auth.CacheTTL)
-
-	f, err = parseConfig(src("/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  authorize_url: https://rbac.example.com\n"), "grafana.yaml")
-	require.NoError(t, err)
-	assert.Equal(t, "https://rbac.example.com", f.Auth.AuthorizeURL)
 
 	f, err = parseConfig(src("/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  authorize: false\n"), "grafana.yaml")
 	require.NoError(t, err)
@@ -223,7 +218,6 @@ func TestParseConfigAuth(t *testing.T) {
 	for name, c := range map[string][2]string{
 		"no url":      {"/apis/grafana.example.com/v1/namespaces/{namespace}", "  api: x\n"},
 		"not a URL":   {"/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: auth.example.com\n"},
-		"bad rbac":    {"/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  authorize_url: rbac\n"},
 		"no group":    {"/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n"},
 		"group is ns": {"/apis/{namespace}/v1", "  url: https://auth.example.com\n"},
 	} {

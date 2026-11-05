@@ -244,15 +244,7 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 		// token the service resolves.
 		opts = append(opts, server.WithAuth(client.Middleware()))
 		if *f.Auth.Authorize {
-			checker := client
-			if f.Auth.AuthorizeURL != f.Auth.URL {
-				// The RBAC on a service of its own; its decisions are
-				// never cached, whichever client asks.
-				if checker, err = auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.AuthorizeURL}); err != nil {
-					return err
-				}
-			}
-			rbac = &access{checker: checker, api: f.Auth.API}
+			rbac = &access{checker: client, api: f.Auth.API}
 		}
 	}
 	engine, err := server.NewServerGin(cfg, opts...)

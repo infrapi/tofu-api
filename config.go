@@ -405,10 +405,9 @@ func expand(v any, lookup func(string) (string, bool)) (any, error) {
 // AuthorizePath). The operational endpoints
 // under /-/ stay open.
 type authConfig struct {
-	// URL is the authentication service's, which resolves a token.
+	// URL is the authentication service's, which resolves a token and
+	// whose RBAC decides.
 	URL string `yaml:"url"`
-	// AuthorizeURL is the service the RBAC decides on: url unless set.
-	AuthorizeURL string `yaml:"authorize_url"`
 	// CacheTTL keeps a token's identity that long: 1h unless set, a
 	// negative value for none. The RBAC's decisions are never kept.
 	CacheTTL time.Duration `yaml:"cache_ttl"`
@@ -421,14 +420,9 @@ type authConfig struct {
 
 // check sets the defaults; basePath is api.base_path, {provider} replaced.
 func (a *authConfig) check(basePath string) error {
-	if a.AuthorizeURL == "" {
-		a.AuthorizeURL = a.URL
-	}
-	for name, v := range map[string]string{"url": a.URL, "authorize_url": a.AuthorizeURL} {
-		u, err := url.Parse(v)
-		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-			return fmt.Errorf("%s %q: want an http(s) URL", name, v)
-		}
+	u, err := url.Parse(a.URL)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return fmt.Errorf("url %q: want the authentication service's http(s) URL", a.URL)
 	}
 	if a.Authorize == nil {
 		a.Authorize = new(bool)
