@@ -24,9 +24,9 @@ type api struct {
 	// dataSources are the data sources' schemas, dataRules their rules.
 	dataSources map[string]tofu.Block
 	dataRules   rules
-	types  map[string]tofu.Block
-	rules  rules
-	errors []errorRule
+	types       map[string]tofu.Block
+	rules       rules
+	errors      []errorRule
 }
 
 // segment is the path segment of a resource type: example_project → project.

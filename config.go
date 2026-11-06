@@ -49,13 +49,13 @@ import (
 // extensions; they see the request body as spec and the namespace of the path
 // as ns, CEL reserving the word namespace.
 type configFile struct {
-	API        apiConfig            `yaml:"api"`
-	Provider   providerConfig       `yaml:"provider"`
-	Namespaces *namespacesConfig    `yaml:"namespaces"`
-	Auth       *authConfig          `yaml:"auth"`
+	API         apiConfig            `yaml:"api"`
+	Provider    providerConfig       `yaml:"provider"`
+	Namespaces  *namespacesConfig    `yaml:"namespaces"`
+	Auth        *authConfig          `yaml:"auth"`
 	Types       map[string]typeRules `yaml:"resources"`
 	DataSources map[string]typeRules `yaml:"data_sources"`
-	Errors     []errorRuleSpec      `yaml:"errors"`
+	Errors      []errorRuleSpec      `yaml:"errors"`
 }
 
 const (
