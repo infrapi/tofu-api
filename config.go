@@ -53,7 +53,8 @@ type configFile struct {
 	Provider   providerConfig       `yaml:"provider"`
 	Namespaces *namespacesConfig    `yaml:"namespaces"`
 	Auth       *authConfig          `yaml:"auth"`
-	Types      map[string]typeRules `yaml:"resources"`
+	Types       map[string]typeRules `yaml:"resources"`
+	DataSources map[string]typeRules `yaml:"data_sources"`
 	Errors     []errorRuleSpec      `yaml:"errors"`
 }
 
@@ -223,8 +224,8 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 			return configFile{}, fmt.Errorf("%s: namespaces: %w", filename, err)
 		}
 	}
-	if len(f.Types) == 0 {
-		return configFile{}, fmt.Errorf("%s: resources: name at least one resource type to expose", filename)
+	if len(f.Types) == 0 && len(f.DataSources) == 0 {
+		return configFile{}, fmt.Errorf("%s: resources, data_sources: name at least one resource type or data source to expose", filename)
 	}
 	return f, nil
 }
@@ -329,6 +330,16 @@ func (v vaultConfig) resolved(lookup func(string) (string, bool)) (vaultConfig, 
 }
 
 // typeNames are the resource types to expose, sorted.
+// dataSourceNames are the data sources to expose, sorted.
+func (f configFile) dataSourceNames() []string {
+	names := make([]string, 0, len(f.DataSources))
+	for t := range f.DataSources {
+		names = append(names, t)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func (f configFile) typeNames() []string {
 	names := make([]string, 0, len(f.Types))
 	for t := range f.Types {

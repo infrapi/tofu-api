@@ -24,6 +24,7 @@ type provider interface {
 	Import(ctx context.Context, resourceType, id string) (tofu.Resource, error)
 	Update(ctx context.Context, state tofu.Resource, config map[string]any) (tofu.Resource, error)
 	Delete(ctx context.Context, state tofu.Resource) error
+	ReadDataSource(ctx context.Context, dataSource string, config map[string]any) (map[string]any, error)
 }
 
 // handlers serve every resource type of one provider, and keep nothing: the
@@ -53,6 +54,14 @@ func (h *handlers) routes(r gin.IRouter) {
 		r.GET(base+"/:id", append(guard, h.get(t))...)
 		r.PUT(base+"/:id", append(guard, h.update(t))...)
 		r.DELETE(base+"/:id", append(guard, h.delete(t))...)
+	}
+	for ds := range h.api.dataSources {
+		base := strings.NewReplacer("{namespace}", ":namespace").Replace(h.api.base(ds))
+		var guard []gin.HandlerFunc
+		if h.access != nil {
+			guard = []gin.HandlerFunc{h.authorize(ds)}
+		}
+		r.GET(base, append(guard, h.read(ds))...)
 	}
 }
 
@@ -299,8 +308,14 @@ func decodeSpec(c *gin.Context) (map[string]any, bool) {
 // an update, the current value wins over the default, so that renaming a
 // folder does not change the uid derived from its first name.
 func (h *handlers) config(t, namespace string, spec, prior map[string]any) (map[string]any, error) {
+	return applyRules(h.api.rules[t], t, namespace, spec, prior)
+}
+
+// applyRules is config, for the rules rs of t, a resource type's or a data
+// source's.
+func applyRules(rs map[string]rule, t, namespace string, spec, prior map[string]any) (map[string]any, error) {
 	config := maps.Clone(spec)
-	for name, r := range h.api.rules[t] {
+	for name, r := range rs {
 		switch {
 		case r.Value != nil:
 			v, err := r.Value.eval(namespace, spec)
@@ -329,10 +344,15 @@ func (h *handlers) config(t, namespace string, spec, prior map[string]any) (map[
 // view is a resource as the API returns it: the provider's state, id
 // included, sensitive values too, without write-only nor hidden attributes.
 func (h *handlers) view(t string, res tofu.Resource) map[string]any {
-	b := h.api.types[t]
-	state := make(map[string]any, len(res.Attributes))
-	for k, v := range res.Attributes {
-		if a, ok := b.Attributes[k]; (ok && a.WriteOnly) || h.api.rules[t][k].Hidden {
+	return visible(h.api.types[t], h.api.rules[t], res.Attributes)
+}
+
+// visible is attrs without the write-only attributes of b, nor those rs
+// hide.
+func visible(b tofu.Block, rs map[string]rule, attrs map[string]any) map[string]any {
+	state := make(map[string]any, len(attrs))
+	for k, v := range attrs {
+		if a, ok := b.Attributes[k]; (ok && a.WriteOnly) || rs[k].Hidden {
 			continue
 		}
 		state[k] = v

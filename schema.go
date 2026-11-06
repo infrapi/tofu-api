@@ -14,6 +14,8 @@ import (
 type schemaSource interface {
 	ResourceTypes() []string
 	ResourceSchema(resourceType string) (tofu.Block, error)
+	DataSourceTypes() []string
+	DataSourceSchema(dataSource string) (tofu.Block, error)
 }
 
 // loadSchemas reads the schemas of the given managed resource types from a
@@ -26,6 +28,24 @@ func loadSchemas(p schemaSource, types []string) (map[string]tofu.Block, error) 
 			known := p.ResourceTypes()
 			sort.Strings(known)
 			return nil, fmt.Errorf("provider has no resource type %q (it has %d, e.g. %v)", name, len(known), known[:min(5, len(known))])
+		}
+		if err != nil {
+			return nil, err
+		}
+		out[name] = b
+	}
+	return out, nil
+}
+
+// loadDataSchemas reads the schemas of the given data sources from a running
+// provider.
+func loadDataSchemas(p schemaSource, names []string) (map[string]tofu.Block, error) {
+	out := map[string]tofu.Block{}
+	for _, name := range names {
+		b, err := p.DataSourceSchema(name)
+		if infraerrors.ErrorCode(err) == http.StatusNotFound {
+			known := p.DataSourceTypes()
+			return nil, fmt.Errorf("provider has no data source %q (it has %d, e.g. %v)", name, len(known), known[:min(5, len(known))])
 		}
 		if err != nil {
 			return nil, err

@@ -199,6 +199,12 @@ func build(f configFile, filename string, p schemaSource) (*api, []byte, error) 
 	if a.rules, a.errors, err = parseRules(f, filename, schemas); err != nil {
 		return nil, nil, err
 	}
+	if a.dataSources, err = loadDataSchemas(p, f.dataSourceNames()); err != nil {
+		return nil, nil, err
+	}
+	if a.dataRules, err = parseDataRules(f, filename, a.dataSources); err != nil {
+		return nil, nil, err
+	}
 	contract, err := json.MarshalIndent(a.document(), "", "  ")
 	if err != nil {
 		return nil, nil, fmt.Errorf("encode contract: %w", err)

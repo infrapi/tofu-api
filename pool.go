@@ -202,6 +202,11 @@ func (w *watched) Delete(ctx context.Context, state tofu.Resource) error {
 	return w.check(w.p.Delete(ctx, state))
 }
 
+func (w *watched) ReadDataSource(ctx context.Context, dataSource string, config map[string]any) (map[string]any, error) {
+	attrs, err := w.p.ReadDataSource(ctx, dataSource, config)
+	return attrs, w.check(err)
+}
+
 // check retires the instance when err says its process does not answer:
 // gRPC's Unavailable, as when the process died. What the provider says of
 // its API comes as diagnostics, not as this.

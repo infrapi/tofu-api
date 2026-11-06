@@ -93,6 +93,17 @@ func (f fakeSchemas) ResourceSchema(resourceType string) (tofu.Block, error) {
 	return b, nil
 }
 
+// The fake's data sources are its resource types, schema for schema.
+func (f fakeSchemas) DataSourceTypes() []string { return f.ResourceTypes() }
+
+func (f fakeSchemas) DataSourceSchema(dataSource string) (tofu.Block, error) {
+	b, ok := f[dataSource]
+	if !ok {
+		return tofu.Block{}, infraerrors.NotFound("no data source %q", dataSource)
+	}
+	return b, nil
+}
+
 func TestLoadSchemasUnknownType(t *testing.T) {
 	_, err := loadSchemas(fakeSchemas{"grafana_folder": folder}, []string{"grafana_foldr"})
 	assert.ErrorContains(t, err, `provider has no resource type "grafana_foldr" (it has 1, e.g. [grafana_folder])`)

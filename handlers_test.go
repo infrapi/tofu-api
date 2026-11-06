@@ -28,6 +28,20 @@ type fakeProvider struct {
 	err     error                     // returned by Create, when set
 	stores  map[string]any            // what Create stores instead of what it is given
 	create  func(ctx context.Context) // called as Create starts, when set
+	read    map[string]any            // the config of the last ReadDataSource
+}
+
+// ReadDataSource reads what it is given, plus what a data source reads:
+// an id and the titles it lists. read keeps the last config.
+func (f *fakeProvider) ReadDataSource(_ context.Context, _ string, config map[string]any) (map[string]any, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	f.read = maps.Clone(config)
+	attrs := maps.Clone(config)
+	attrs["id"] = "folders"
+	attrs["titles"] = []any{"Ops", "Dev"}
+	return attrs, nil
 }
 
 func newFakeProvider() *fakeProvider {

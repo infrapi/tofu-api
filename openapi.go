@@ -21,6 +21,9 @@ type api struct {
 	namespacePattern string
 	// bearer: every operation needs a bearer token (auth).
 	bearer bool
+	// dataSources are the data sources' schemas, dataRules their rules.
+	dataSources map[string]tofu.Block
+	dataRules   rules
 	types  map[string]tofu.Block
 	rules  rules
 	errors []errorRule
@@ -130,6 +133,7 @@ func (a *api) document() object {
 		}
 	}
 
+	a.dataSourcePaths(paths, schemas)
 	doc := object{
 		"openapi": "3.0.3",
 		"info": object{
