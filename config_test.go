@@ -22,7 +22,7 @@ provider:
     auth: ${GRAFANA_AUTH}
     retry_status_codes: ["429", "${RETRY_ON}"]
     note: costs $$5
-types:
+resources:
   grafana_team: {}
   grafana_folder: {}
 `
@@ -51,7 +51,7 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestParseConfigSettings(t *testing.T) {
-	f, err := parseConfig([]byte("provider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\n  name: dashboards\n  parallelism: 2\n  timeout: 90s\ntypes:\n  grafana_folder: {}\n"), "grafana.yaml")
+	f, err := parseConfig([]byte("provider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\n  name: dashboards\n  parallelism: 2\n  timeout: 90s\nresources:\n  grafana_folder: {}\n"), "grafana.yaml")
 	require.NoError(t, err)
 	assert.Equal(t, "dashboards", f.Provider.Name)
 	assert.Equal(t, 2, f.Provider.Parallelism)
@@ -60,12 +60,13 @@ func TestParseConfigSettings(t *testing.T) {
 
 func TestParseConfigRejects(t *testing.T) {
 	for name, src := range map[string]string{
-		"empty":          "",
-		"no binary_path": "types:\n  grafana_folder: {}\n",
-		"no types":       "provider:\n  binary_path: ./terraform-provider-grafana\n",
-		"unknown key":    "provider:\n  binary_path: ./terraform-provider-grafana\n  path: x\ntypes:\n  grafana_folder: {}\n",
-		"no parallelism": "provider:\n  binary_path: ./terraform-provider-grafana\n  parallelism: -1\ntypes:\n  grafana_folder: {}\n",
-		"not a duration": "provider:\n  binary_path: ./terraform-provider-grafana\n  timeout: soon\ntypes:\n  grafana_folder: {}\n",
+		"empty":                "",
+		"no binary_path":       "resources:\n  grafana_folder: {}\n",
+		"no resources":         "provider:\n  binary_path: ./terraform-provider-grafana\n",
+		"types, now resources": "provider:\n  binary_path: ./terraform-provider-grafana\ntypes:\n  grafana_folder: {}\n",
+		"unknown key":          "provider:\n  binary_path: ./terraform-provider-grafana\n  path: x\nresources:\n  grafana_folder: {}\n",
+		"no parallelism":       "provider:\n  binary_path: ./terraform-provider-grafana\n  parallelism: -1\nresources:\n  grafana_folder: {}\n",
+		"not a duration":       "provider:\n  binary_path: ./terraform-provider-grafana\n  timeout: soon\nresources:\n  grafana_folder: {}\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := parseConfig([]byte(src), "grafana.yaml")
@@ -107,7 +108,7 @@ namespaces:
     role_id: ${VAULT_ROLE_ID}
     secret_id_file: /run/secrets/vault-secret-id
     path: tofu-api/grafana/{namespace}
-types:
+resources:
   grafana_folder: {}
 `), "grafana.yaml")
 	require.NoError(t, err)
@@ -128,7 +129,7 @@ types:
 }
 
 func TestParseConfigNamespacesRejects(t *testing.T) {
-	const head = "provider:\n  binary_path: ./terraform-provider-grafana\ntypes:\n  grafana_folder: {}\nnamespaces:\n"
+	const head = "provider:\n  binary_path: ./terraform-provider-grafana\nresources:\n  grafana_folder: {}\nnamespaces:\n"
 	for name, src := range map[string]string{
 		"no vault":      "  idle: 5m\n",
 		"no namespace":  "  vault: {address: http://vault, role_id: r, secret_id: s, mount: kv, path: grafana}\n",
@@ -145,7 +146,7 @@ func TestParseConfigNamespacesRejects(t *testing.T) {
 
 func TestParseConfigBasePath(t *testing.T) {
 	src := func(basePath string) []byte {
-		return fmt.Appendf(nil, "api:\n  base_path: %q\nprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\ntypes:\n  grafana_folder: {}\n", basePath)
+		return fmt.Appendf(nil, "api:\n  base_path: %q\nprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\nresources:\n  grafana_folder: {}\n", basePath)
 	}
 	for basePath, want := range map[string]string{
 		"":                        "/grafana/v1/namespaces/{namespace}",
@@ -175,7 +176,7 @@ func TestParseConfigBasePath(t *testing.T) {
 
 func TestParseConfigNamespacePattern(t *testing.T) {
 	src := func(pattern string) []byte {
-		return fmt.Appendf(nil, "api:\n  namespace_pattern: %q\nprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\ntypes:\n  grafana_folder: {}\n", pattern)
+		return fmt.Appendf(nil, "api:\n  namespace_pattern: %q\nprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\nresources:\n  grafana_folder: {}\n", pattern)
 	}
 	for pattern, want := range map[string]string{
 		"":                defaultNamespacePattern,
@@ -199,7 +200,7 @@ func TestParseConfigNamespacePattern(t *testing.T) {
 
 func TestParseConfigAuth(t *testing.T) {
 	src := func(basePath, auth string) []byte {
-		return fmt.Appendf(nil, "api:\n  base_path: %q\nauth:\n%sprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\ntypes:\n  grafana_folder: {}\n", basePath, auth)
+		return fmt.Appendf(nil, "api:\n  base_path: %q\nauth:\n%sprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\nresources:\n  grafana_folder: {}\n", basePath, auth)
 	}
 	f, err := parseConfig(src("/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: https://auth.example.com\n"), "grafana.yaml")
 	require.NoError(t, err)

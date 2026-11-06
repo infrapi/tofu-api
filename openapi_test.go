@@ -41,7 +41,7 @@ var folder = tofu.Block{
 }
 
 const testRules = `
-types:
+resources:
   grafana_folder:
     attributes:
       org_id:
@@ -161,10 +161,10 @@ func TestCamel(t *testing.T) {
 func TestParseRulesRejects(t *testing.T) {
 	types := map[string]tofu.Block{"grafana_folder": folder}
 	attr := func(name, body string) string {
-		return "types:\n  grafana_folder:\n    attributes:\n      " + name + ":\n" + body
+		return "resources:\n  grafana_folder:\n    attributes:\n      " + name + ":\n" + body
 	}
 	for name, src := range map[string]string{
-		"not yaml":            "types: [",
+		"not yaml":            "resources: [",
 		"unknown key":         "type: {}",
 		"unknown attribute":   attr("nope", "        value: ns\n"),
 		"computed attribute":  attr("url", "        value: ns\n"),
@@ -178,10 +178,10 @@ func TestParseRulesRejects(t *testing.T) {
 		"unknown setting":     attr("uid", "        maximum: 3\n"),
 		"misspelt setting":    attr("uid", "        maxlength: 3\n"),
 		"hidden required":     attr("title", "        hidden: true\n"),
-		"error without match": "types:\n  grafana_folder: {}\nerrors:\n  - code: conflict\n    status: 409\n",
-		"error without code":  "types:\n  grafana_folder: {}\nerrors:\n  - match: x\n    status: 409\n",
-		"error not an error":  "types:\n  grafana_folder: {}\nerrors:\n  - code: conflict\n    match: x\n    status: 200\n",
-		"error bad regexp":    "types:\n  grafana_folder: {}\nerrors:\n  - code: conflict\n    match: '('\n    status: 409\n",
+		"error without match": "resources:\n  grafana_folder: {}\nerrors:\n  - code: conflict\n    status: 409\n",
+		"error without code":  "resources:\n  grafana_folder: {}\nerrors:\n  - match: x\n    status: 409\n",
+		"error not an error":  "resources:\n  grafana_folder: {}\nerrors:\n  - code: conflict\n    match: x\n    status: 200\n",
+		"error bad regexp":    "resources:\n  grafana_folder: {}\nerrors:\n  - code: conflict\n    match: '('\n    status: 409\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, _, err := testParseRules(src, types)
@@ -191,7 +191,7 @@ func TestParseRulesRejects(t *testing.T) {
 }
 
 func TestParseRulesEmpty(t *testing.T) {
-	rs, errs, err := testParseRules("types:\n  grafana_folder: {}\n", map[string]tofu.Block{"grafana_folder": folder})
+	rs, errs, err := testParseRules("resources:\n  grafana_folder: {}\n", map[string]tofu.Block{"grafana_folder": folder})
 	require.NoError(t, err)
 	assert.Empty(t, rs["grafana_folder"])
 	assert.Empty(t, errs)

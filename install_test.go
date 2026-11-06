@@ -279,7 +279,7 @@ func assertEmptyCache(t *testing.T, in *installer) {
 }
 
 func TestConfigSourceOrBinaryPath(t *testing.T) {
-	const types = "types:\n  thing_a: {}\n"
+	const types = "resources:\n  thing_a: {}\n"
 	f, err := parseConfig([]byte("provider:\n  source: example/thing\n  version: 1.2.0\n"+types), "x.yaml")
 	require.NoError(t, err)
 	assert.Equal(t, "thing", f.Provider.Name)

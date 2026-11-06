@@ -164,14 +164,14 @@ provider:
     client_password: ${FOREMAN_CLIENT_PASSWORD}   # $$ is a $
 # auth:                            # a bearer token, and the RBAC's leave (see Authentication)
 #   url: https://auth.example.com
-types:
+resources:
   foreman_host:                    # rules, see below
     attributes: {…}
   foreman_subnet: {}               # exposed as the provider has it
 errors: […]                        # see below
 ```
 
-`types` names every resource type to expose. `gen` does not read the
+`resources` names every resource type to expose. `gen` does not read the
 environment; `serve` stops if a variable `provider.config` names is not set.
 Server settings (address, logs) stay in `INFRAPI_*` variables, as for any
 service on the lib.
@@ -308,7 +308,7 @@ Rules lay over the provider's schemas what a Terraform module adds around a
 bare resource, and say which HTTP error a provider's failure stands for:
 
 ```yaml
-types:
+resources:
   foreman_host:
     attributes:
       name:

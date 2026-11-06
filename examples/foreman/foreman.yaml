@@ -58,7 +58,7 @@ provider:
 # The resource types to expose, and the rules over their schemas. Expressions
 # are CEL (https://cel.dev); they see the namespace of the path as ns and the
 # request body as spec.
-types:
+resources:
   foreman_host:
     attributes:
       name:

@@ -87,7 +87,7 @@ func parseRules(f configFile, filename string, types map[string]tofu.Block) (rul
 		b := types[t]
 		out[t] = map[string]rule{}
 		for name, ar := range tr.Attributes {
-			where := fmt.Sprintf("%s: types.%s.attributes.%s", filename, t, name)
+			where := fmt.Sprintf("%s: resources.%s.attributes.%s", filename, t, name)
 			attr, ok := b.Attributes[name]
 			if !ok || attr.Usage == tofu.UsageComputed {
 				return nil, nil, fmt.Errorf("%s: %s has no attribute %q a caller could set", where, t, name)

@@ -30,7 +30,7 @@ import (
 //	  config:
 //	    url: https://example.com
 //	    token: ${EXAMPLE_TOKEN}               # from the environment
-//	types:
+//	resources:
 //	  example_project:
 //	    attributes:
 //	      owner:
@@ -53,7 +53,7 @@ type configFile struct {
 	Provider   providerConfig       `yaml:"provider"`
 	Namespaces *namespacesConfig    `yaml:"namespaces"`
 	Auth       *authConfig          `yaml:"auth"`
-	Types      map[string]typeRules `yaml:"types"`
+	Types      map[string]typeRules `yaml:"resources"`
 	Errors     []errorRuleSpec      `yaml:"errors"`
 }
 
@@ -173,6 +173,9 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(src))
 	dec.KnownFields(true)
 	if err := dec.Decode(&f); err != nil && !errors.Is(err, io.EOF) {
+		if strings.Contains(err.Error(), "field types not found") {
+			return configFile{}, fmt.Errorf("%s: types: renamed resources: %w", filename, err)
+		}
 		return configFile{}, fmt.Errorf("%s: %w", filename, err)
 	}
 	switch p := f.Provider; {
@@ -221,7 +224,7 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 		}
 	}
 	if len(f.Types) == 0 {
-		return configFile{}, fmt.Errorf("%s: types: name at least one resource type to expose", filename)
+		return configFile{}, fmt.Errorf("%s: resources: name at least one resource type to expose", filename)
 	}
 	return f, nil
 }
