@@ -4,7 +4,7 @@ go 1.26.7
 
 require (
 	cel.dev/cel-go v0.33.0
-	github.com/getkin/kin-openapi v0.149.0
+	github.com/getkin/kin-openapi v0.152.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hashicorp/hcl v1.0.0
 	github.com/infrapi/lib v0.10.0
