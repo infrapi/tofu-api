@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hashicorp/hcl v1.0.0
 	github.com/infrapi/lib v0.10.0
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/stretchr/testify v1.12.1
 	github.com/zclconf/go-cty v1.19.0
 	go.yaml.in/yaml/v3 v3.0.5
@@ -61,9 +61,9 @@ require (
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/opentofu/provider-client v0.0.0-20260928141845-8e183a0aa22a // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.70.1 // indirect
-	github.com/prometheus/procfs v0.21.1 // indirect
+	github.com/prometheus/client_model v0.6.3 // indirect
+	github.com/prometheus/common v0.72.0 // indirect
+	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.63.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
