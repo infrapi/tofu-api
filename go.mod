@@ -10,7 +10,7 @@ require (
 	github.com/infrapi/lib v0.10.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/stretchr/testify v1.12.1
-	github.com/zclconf/go-cty v1.19.0
+	github.com/zclconf/go-cty v1.20.0
 	go.yaml.in/yaml/v3 v3.0.5
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
