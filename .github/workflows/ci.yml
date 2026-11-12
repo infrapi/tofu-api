@@ -55,6 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.semrel.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -84,3 +86,11 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # A new release: the portal (infrapi/docs) and the org profile
+  # (infrapi/.github) show each product's latest release, tell them.
+  notify:
+    needs: release
+    if: needs.release.outputs.version != ''
+    uses: ./.github/workflows/notify-docs.yml
+    secrets: inherit
