@@ -25,6 +25,7 @@ type provider interface {
 	Update(ctx context.Context, state tofu.Resource, config map[string]any) (tofu.Resource, error)
 	Delete(ctx context.Context, state tofu.Resource) error
 	ReadDataSource(ctx context.Context, dataSource string, config map[string]any) (map[string]any, error)
+	Plan(ctx context.Context, state tofu.Resource, config map[string]any) (tofu.ResourcePlan, error)
 }
 
 // handlers serve every resource type of one provider, and keep nothing: the
@@ -81,6 +82,10 @@ func (h *handlers) create(t string) gin.HandlerFunc {
 			return
 		}
 		defer release()
+		if dryRun(c) {
+			h.plan(c, p, t, nil, config)
+			return
+		}
 		ctx, cancel := h.change(c)
 		defer cancel()
 		res, err := p.Create(ctx, t, config)
@@ -134,6 +139,10 @@ func (h *handlers) update(t string) gin.HandlerFunc {
 		config, err := h.config(t, c.Param("namespace"), spec, prior.Attributes)
 		if err != nil {
 			server.AbortError(c, err)
+			return
+		}
+		if dryRun(c) {
+			h.plan(c, p, t, &prior, config)
 			return
 		}
 		ctx, cancel := h.change(c)

@@ -53,6 +53,7 @@ func camel(s string) string {
 func (a *api) document() object {
 	paths := object{}
 	schemas := object{
+		"Plan": planSchema,
 		"Problem": object{
 			"type": "object",
 			"properties": object{
@@ -93,9 +94,11 @@ func (a *api) document() object {
 				"tags":        []string{tag},
 				"summary":     "Create a " + t,
 				"description": b.Description,
+				"parameters":  []any{ref("#/components/parameters/dryRun")},
 				"requestBody": body,
 				"responses": object{
 					"201":     jsonContent("Created", ref(name)),
+					"200":     jsonContent("With dryRun: what creating it would do, nothing created", ref("Plan")),
 					"default": ref("#/components/responses/Problem"),
 				},
 			},
@@ -115,9 +118,14 @@ func (a *api) document() object {
 				"operationId": "update" + name,
 				"tags":        []string{tag},
 				"summary":     "Update a " + t,
+				"description": "With dryRun, the plan instead: what the update would change, from the " + t + " as it is now. Planned with the spec it was created with, the changes are its drift.",
+				"parameters":  []any{ref("#/components/parameters/dryRun")},
 				"requestBody": body,
 				"responses": object{
-					"200":     jsonContent("Updated", ref(name)),
+					"200": object{
+						"description": "Updated; with dryRun, the plan, nothing changed",
+						"content":     object{"application/json": object{"schema": object{"oneOf": []any{ref(name), ref("Plan")}}}},
+					},
 					"default": ref("#/components/responses/Problem"),
 				},
 			},
@@ -148,6 +156,11 @@ func (a *api) document() object {
 				"namespace": object{
 					"name": "namespace", "in": "path", "required": true,
 					"schema": object{"type": "string", "pattern": a.namespacePattern},
+				},
+				"dryRun": object{
+					"name": "dryRun", "in": "query",
+					"description": "true: plan the request without applying it, and answer the plan.",
+					"schema":      object{"type": "boolean", "default": false},
 				},
 				"id": object{
 					"name": "id", "in": "path", "required": true,
@@ -334,4 +347,28 @@ func typeSchema(ty cty.Type) object {
 		return object{"type": "array", "minItems": n, "maxItems": n}
 	}
 	return object{} // cty.DynamicPseudoType: any JSON value
+}
+
+// planSchema is a dry run's answer.
+var planSchema = object{
+	"type":     "object",
+	"required": []string{"action", "changes", "planned", "unknown"},
+	"properties": object{
+		"action": object{"type": "string", "enum": []string{"none", "create", "update", "replace"},
+			"description": "none: it matches; update: changed in place; replace: deleted and created again; create: a dry run of a create"},
+		"changes": object{"type": "array", "items": object{
+			"type":     "object",
+			"required": []string{"path"},
+			"properties": object{
+				"path":      object{"type": "string", "description": `title, settings.theme, permission[0].role, labels["env"]`},
+				"current":   object{"description": "the value now; absent when sensitive or none"},
+				"planned":   object{"description": "the value once applied; absent when sensitive, unknown or none"},
+				"sensitive": object{"type": "boolean"},
+				"unknown":   object{"type": "boolean", "description": "known only once applied"},
+			},
+		}},
+		"current": object{"type": "object", "description": "the resource now, for an update"},
+		"planned": object{"type": "object", "description": "the resource once applied, what only applying knows left null"},
+		"unknown": object{"type": "array", "items": object{"type": "string"}, "description": "paths known only once applied"},
+	},
 }

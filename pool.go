@@ -202,6 +202,11 @@ func (w *watched) Delete(ctx context.Context, state tofu.Resource) error {
 	return w.check(w.p.Delete(ctx, state))
 }
 
+func (w *watched) Plan(ctx context.Context, state tofu.Resource, config map[string]any) (tofu.ResourcePlan, error) {
+	pl, err := w.p.Plan(ctx, state, config)
+	return pl, w.check(err)
+}
+
 func (w *watched) ReadDataSource(ctx context.Context, dataSource string, config map[string]any) (map[string]any, error) {
 	attrs, err := w.p.ReadDataSource(ctx, dataSource, config)
 	return attrs, w.check(err)

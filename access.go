@@ -46,6 +46,9 @@ func (h *handlers) authorize(t string) gin.HandlerFunc {
 			server.AbortError(c, infraerrors.New(http.StatusMethodNotAllowed, "tofu-api.authorize", "%s", err))
 			return
 		}
+		if dryRun(c) {
+			verb = "get" // a plan changes nothing: reading the resource is enough
+		}
 		allowed, reason, err := h.access.checker.Authorize(c.Request.Context(), token, auth.AuthorizeRequest{
 			Namespace: c.Param("namespace"), Api: h.access.api, Resource: resource, Verb: verb,
 		})

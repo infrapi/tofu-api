@@ -29,6 +29,9 @@ type rule struct {
 	// Hidden leaves the attribute out of the contract altogether, request
 	// and response: what the caller need not know, such as the org.
 	Hidden bool
+	// IgnoreDrift leaves the attribute out of a dry run's changes: one the
+	// provider cannot read back, which would always differ.
+	IgnoreDrift bool
 
 	// Constraints, added to the request schema and checked on a default.
 	Pattern     *regexp.Regexp
@@ -89,7 +92,10 @@ func parseRules(f configFile, filename string, types map[string]tofu.Block) (rul
 		for name, ar := range tr.Attributes {
 			where := fmt.Sprintf("%s: resources.%s.attributes.%s", filename, t, name)
 			attr, ok := b.Attributes[name]
-			if !ok || attr.Usage == tofu.UsageComputed {
+			// Only ignore_drift applies to what the provider alone sets.
+			onlyDrift := ar.IgnoreDrift && ar.Value == nil && ar.Default == nil && !ar.Hidden && ar.Pattern == "" &&
+				ar.MinLength == nil && ar.MaxLength == nil && len(ar.Enum) == 0 && ar.Description == ""
+			if !ok || (attr.Usage == tofu.UsageComputed && !onlyDrift) {
 				return nil, nil, fmt.Errorf("%s: %s has no attribute %q a caller could set", where, t, name)
 			}
 			r, err := compileRule(ar, b)
@@ -117,6 +123,7 @@ func parseRules(f configFile, filename string, types map[string]tofu.Block) (rul
 func compileRule(ar attributeRule, b tofu.Block) (rule, error) {
 	r := rule{
 		Hidden:      ar.Hidden,
+		IgnoreDrift: ar.IgnoreDrift,
 		MinLength:   ar.MinLength,
 		MaxLength:   ar.MaxLength,
 		Enum:        ar.Enum,

@@ -36,6 +36,7 @@ resources:
 | `default` | optional, `x-default` and the description name the expression | used when the attribute is absent; on an update the current value wins, so a rename keeps the uid |
 | `pattern`, `minLength`, `maxLength`, `enum` | added to the attribute's schema | checked by the contract, and on a default's result |
 | `hidden` | attribute removed from request and response | sending it is a 400; the provider's default applies, or the rule's `value`/`default` |
+| `ignore_drift` | unchanged | left out of a [dry run](dry-run.md)'s changes: an attribute the provider cannot read back, which would always differ; the only rule allowed on a computed attribute |
 | `description` | replaces the provider's | |
 
 An unknown key, a misspelt `maxlength` included, stops the service.

@@ -8,6 +8,7 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +43,33 @@ func (f *fakeProvider) ReadDataSource(_ context.Context, _ string, config map[st
 	attrs["id"] = "folders"
 	attrs["titles"] = []any{"Ops", "Dev"}
 	return attrs, nil
+}
+
+// Plan compares the config with the state attribute by attribute, as the
+// provider would: a change for every value that differs, the id unknown on
+// a create.
+func (f *fakeProvider) Plan(_ context.Context, state tofu.Resource, config map[string]any) (tofu.ResourcePlan, error) {
+	pl := tofu.ResourcePlan{Action: tofu.ActionUpdate, Planned: maps.Clone(config), Unknown: []string{}}
+	if state.Attributes == nil {
+		pl.Action = tofu.ActionCreate
+		pl.Unknown = []string{"id"}
+	} else {
+		pl.Planned["id"] = state.Attributes["id"]
+	}
+	keys := make([]string, 0, len(config))
+	for k := range config {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if before := state.Attributes[k]; fmt.Sprint(before) != fmt.Sprint(config[k]) {
+			pl.Changes = append(pl.Changes, tofu.Change{Path: k, Before: before, After: config[k], Sensitive: k == "token"})
+		}
+	}
+	if pl.Action == tofu.ActionUpdate && len(pl.Changes) == 0 {
+		pl.Action = tofu.ActionNone
+	}
+	return pl, nil
 }
 
 func newFakeProvider() *fakeProvider {

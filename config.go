@@ -146,6 +146,7 @@ type attributeRule struct {
 	Value       *string  `yaml:"value"`
 	Default     *string  `yaml:"default"`
 	Hidden      bool     `yaml:"hidden"`
+	IgnoreDrift bool     `yaml:"ignore_drift"`
 	Pattern     string   `yaml:"pattern"`
 	MinLength   *int     `yaml:"minLength"`
 	MaxLength   *int     `yaml:"maxLength"`

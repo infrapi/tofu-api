@@ -51,6 +51,7 @@ for linux amd64 and arm64, and RPM and DEB packages: see [Install](docs/install.
 | [Authentication](docs/authentication.md) | bearer tokens and RBAC with `auth` |
 | [Namespaces](docs/namespaces.md) | a provider process per namespace, credentials from Vault |
 | [Data sources](docs/data-sources.md) | read-only data sources, arguments in the query |
+| [Dry run](docs/dry-run.md) | `?dryRun=true`: the plan of a request, a resource's drift |
 | [Rules](docs/rules.md) | attribute rules, error rules, CEL expressions |
 | [Mapping](docs/mapping.md) | provider schema to OpenAPI, and why the service keeps no state |
 | [Operations](docs/operations.md) | provider processes, metrics, concurrency |
