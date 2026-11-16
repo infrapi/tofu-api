@@ -6,8 +6,8 @@ import (
 )
 
 // The pool's metrics, on the default registry, which the server's
-// /-/metrics exposes. No namespace label: namespaces are unbounded, and
-// GET /-/providers lists them.
+// <root>/-/metrics exposes. No namespace label: namespaces are unbounded, and
+// GET <root>/-/providers lists them.
 var (
 	providersRunning = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "tofu_api_providers",

@@ -12,13 +12,12 @@ authentication service, as infrapi/lib's `pkg/auth` checks them:
 
 ```yaml
 api:
-  base_path: /apis/stacks.example.com/v1/namespaces/{namespace}
+  base_path: /apis/stacks.infrapi.io/v1/namespaces/{namespace}
 auth:
-  url: https://auth.example.com    # resolves a token (POST /oauth2/userinfo), and its RBAC decides
+  url: https://auth.example.com    # resolves a token (POST /oauth2/userinfo), and its RBAC decides (the check endpoint its /.well-known/kayra.json names)
   # cache_ttl: 1h                  # how long a token's identity is kept; -1 for not at all
   # authorize: true                # ask the RBAC for every request; false: a valid token is enough
-  # api: stacks.example.com        # the API group the RBAC's rules name; base_path's /apis/<group>/ by default
-  # api_domain: example.com        # the service's own API domain, its check at /apis/authorization.<domain>/v1/check; api's, its first label off, by default
+  # api: stacks.infrapi.io         # the API group the RBAC's rules name; base_path's /apis/<group>/ by default
 ```
 
 - **Who**: a request without a token, or with one the service refuses, is
@@ -30,8 +29,9 @@ auth:
   `foreman_host`. A refusal is a 403 with the RBAC's reason, and the
   provider is not called. Its answers are never kept: a changed role
   applies to the next request.
-- The operational endpoints under `/-/` (health, metrics, contracts, docs)
-  stay open; `/-/providers` needs a token.
+- The operational endpoints under `<root>/-/` (health, metrics, contracts,
+  docs, and `<root>/-/providers`) stay open. See
+  [configuration](configuration.md) for the root.
 - The contract declares a bearer scheme: Swagger UI's Authorize button
   sends it with Try it out.
 - The provider's credentials do not change: the token says who may call

@@ -21,7 +21,7 @@ provider binary ──GetProviderSchema──► resource schemas ──► Open
 
 - the contract is generated from each type's schema, so the provider is the
   only authority on fields, types, required and sensitive attributes;
-- `infrapi/lib/pkg/server` loads it, serves it at `/-/docs` and rejects any
+- `infrapi/lib/pkg/server` loads it, serves it at `<root>/-/docs` (`/foreman/v1/-/docs` by default) and rejects any
   request that does not match it, before a handler runs;
 - the handlers call `pkg/tofu`, which drives the provider.
 

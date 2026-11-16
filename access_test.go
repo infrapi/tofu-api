@@ -39,7 +39,7 @@ func newGuardedEngine(t *testing.T, p provider, rbac accessChecker) *gin.Engine 
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	h := newHandlers(testAPI(t), newShared(p, 10), time.Minute)
-	h.access = &access{checker: rbac, api: "grafana.example.com"}
+	h.access = &access{checker: rbac, api: "grafana.infrapi.io"}
 	h.routes(engine)
 	return engine
 }
@@ -82,7 +82,7 @@ func TestAuthorizeAsksTheRBAC(t *testing.T) {
 	var verbs []string
 	for _, q := range rbac.asked {
 		assert.Equal(t, "acme", q.Namespace)
-		assert.Equal(t, "grafana.example.com", q.Api)
+		assert.Equal(t, "grafana.infrapi.io", q.Api)
 		assert.Equal(t, "folder", q.Resource)
 		verbs = append(verbs, q.Verb)
 	}
@@ -112,11 +112,21 @@ func TestAuthorizeWithoutToken(t *testing.T) {
 	assert.Empty(t, rbac.asked)
 }
 
+// checkPath is where authService's discovery document says its RBAC
+// answers, as Kayra's /.well-known/kayra.json does.
+const checkPath = "/apis/authorization.infrapi.io/v1/check"
+
 // authService stands in for the authentication service: "good" is jdoe's
 // token, whom the RBAC allows in acme only. checked keeps its questions.
 func authService(t *testing.T, checked *[]auth.AuthorizeRequest) *httptest.Server {
 	t.Helper()
 	svc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == auth.DiscoveryPath { // read without a token
+			w.Header().Set("Content-Type", "application/json")
+			_, err := w.Write([]byte(`{"domain":"infrapi.io","endpoints":{"userinfo":"` + auth.UserinfoPath + `","check":"` + checkPath + `"}}`))
+			assert.NoError(t, err)
+			return
+		}
 		if r.Header.Get("Authorization") != "Bearer good" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -126,7 +136,7 @@ func authService(t *testing.T, checked *[]auth.AuthorizeRequest) *httptest.Serve
 		case auth.UserinfoPath:
 			_, err := w.Write([]byte(`{"sub":"jdoe","groups":["sre"]}`))
 			assert.NoError(t, err)
-		case auth.AuthorizePath:
+		case checkPath:
 			var q auth.AuthorizeRequest
 			assert.NoError(t, json.NewDecoder(r.Body).Decode(&q))
 			*checked = append(*checked, q)
@@ -152,7 +162,7 @@ func TestAuthService(t *testing.T) {
 	e := gin.New()
 	e.Use(client.Middleware())
 	h := newHandlers(testAPI(t), newShared(newFakeProvider(), 10), time.Minute)
-	h.access = &access{checker: client, api: "grafana.example.com"}
+	h.access = &access{checker: client, api: "grafana.infrapi.io"}
 	h.routes(e)
 
 	code, _ := doAs(t, e, "bad", http.MethodPost, "/grafana/v1/namespaces/acme/folder", `{"title":"Ops"}`)
@@ -162,7 +172,7 @@ func TestAuthService(t *testing.T) {
 	code, _ = doAs(t, e, "good", http.MethodPost, "/grafana/v1/namespaces/beta/folder", `{"title":"Ops"}`)
 	assert.Equal(t, http.StatusForbidden, code)
 	require.Len(t, checked, 2)
-	assert.Equal(t, auth.AuthorizeRequest{Namespace: "acme", Api: "grafana.example.com", Resource: "folder", Verb: "create"}, checked[0])
+	assert.Equal(t, auth.AuthorizeRequest{Namespace: "acme", Api: "grafana.infrapi.io", Resource: "folder", Verb: "create"}, checked[0])
 }
 
 // As serve sets it up: the server of infrapi/lib validates requests
@@ -184,12 +194,12 @@ func TestAuthThroughTheServer(t *testing.T) {
 	a.bearer = true
 	contract, err := json.Marshal(a.document())
 	require.NoError(t, err)
-	e, err := server.NewServerGin(cfg,
+	e, err := server.NewServerGin(cfg, []string{"/grafana/v1"},
 		server.WithOpenAPI(server.OpenAPISpec{Name: "grafana v1", Path: "grafana/v1.json", Content: contract}),
 		server.WithAuth(client.Middleware()))
 	require.NoError(t, err)
 	h := newHandlers(a, newShared(newFakeProvider(), 10), time.Minute)
-	h.access = &access{checker: client, api: "grafana.example.com"}
+	h.access = &access{checker: client, api: "grafana.infrapi.io"}
 	h.routes(e)
 
 	const folder = `{"title":"Ops","permission":[{"role":"Viewer"}]}`
@@ -201,6 +211,6 @@ func TestAuthThroughTheServer(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, code)
 
 	rec := httptest.NewRecorder()
-	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/-/openapi/grafana/v1.json", nil))
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/grafana/v1/-/openapi/grafana/v1.json", nil))
 	assert.Equal(t, http.StatusOK, rec.Code, "the contract without a token")
 }

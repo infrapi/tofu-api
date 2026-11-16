@@ -31,5 +31,6 @@ curl localhost:8080/foreman/v1/namespaces/acme/domain/<id>
 curl -X DELETE localhost:8080/foreman/v1/namespaces/acme/domain/<id>
 ```
 
-The contract is served at `/-/docs`, with the service's own endpoints
-(`/-/healthz`, `/-/readyz`, `/-/metrics`).
+The contract is served at `/foreman/v1/-/docs`, with the service's own
+endpoints beside it (`/foreman/v1/-/healthz`, `-/readyz`, `-/metrics`): under
+the API's root, the base path before `/namespaces/{namespace}`.

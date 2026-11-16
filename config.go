@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -70,7 +71,9 @@ type apiConfig struct {
 	// BasePath is what the API's paths start with, before the resource type:
 	// /{provider}/v1/namespaces/{namespace} unless set. {provider} is the
 	// provider's name; {namespace}, a whole segment, is required: it picks
-	// the provider's credentials.
+	// the provider's credentials. What comes before {namespace}, without a
+	// final /namespaces, is the API's root (Root): /{provider}/v1, the
+	// operational endpoints going under <root>/-/.
 	BasePath string `yaml:"base_path"`
 	// NamespacePattern is the regular expression a namespace matches, in the
 	// contract and so for every request: defaultNamespacePattern unless set. It is
@@ -254,6 +257,16 @@ func (a *apiConfig) checkNamespacePattern() error {
 	return nil
 }
 
+// Root is the API's root, BasePath up to {namespace}, a final /namespaces
+// dropped: /apis/grafana.infrapi.io/v1 for
+// /apis/grafana.infrapi.io/v1/namespaces/{namespace}. infrapi/lib serves the
+// operational endpoints under it, <root>/-/healthz. Empty when {namespace}
+// comes first.
+func (a apiConfig) Root() string {
+	before, _, _ := strings.Cut(a.BasePath, "/{namespace}")
+	return strings.TrimSuffix(before, "/namespaces")
+}
+
 // check sets the base path, {provider} replaced, and refuses what would not
 // route: it reaches gin and the contract as it is.
 func (a *apiConfig) check(provider string) error {
@@ -264,8 +277,8 @@ func (a *apiConfig) check(provider string) error {
 	switch {
 	case !strings.HasPrefix(p, "/") || path.Clean(p) != p || p == "/":
 		return fmt.Errorf("%q must start with / and be clean, without a final /", a.BasePath)
-	case p == "/-" || strings.HasPrefix(p, "/-/"):
-		return fmt.Errorf("%q: /-/ is for the operational endpoints", a.BasePath)
+	case slices.Contains(strings.Split(p, "/"), "-"):
+		return fmt.Errorf("%q: a - segment is for the operational endpoints, under the root", a.BasePath)
 	}
 	namespaces := 0
 	for _, segment := range strings.Split(p, "/") {
@@ -279,6 +292,9 @@ func (a *apiConfig) check(provider string) error {
 		return fmt.Errorf("%q must have {namespace} once, as a whole segment", a.BasePath)
 	}
 	a.BasePath = p
+	if a.Root() == "" {
+		return fmt.Errorf("%q: the API's root, what comes before {namespace}, must not be empty: the operational endpoints go under it", p)
+	}
 	return nil
 }
 
@@ -417,8 +433,9 @@ func expand(v any, lookup func(string) (string, bool)) (any, error) {
 // infrapi/lib's pkg/auth: every request needs a bearer token it resolves
 // (POST /oauth2/userinfo), and, unless authorize is false, its RBAC allows
 // the request's verb on the resource type in the namespace (pkg/auth's
-// AuthorizePath). The operational endpoints
-// under /-/ stay open.
+// Authorize, at the check endpoint the service's discovery document
+// names). The operational endpoints
+// under <root>/-/ stay open.
 type authConfig struct {
 	// URL is the authentication service's, which resolves a token and
 	// whose RBAC decides.
@@ -431,11 +448,6 @@ type authConfig struct {
 	// API is the API group the RBAC's rules name: the <group> of a
 	// base_path /apis/<group>/... unless set.
 	API string `yaml:"api"`
-	// APIDomain is the authentication service's own API domain, its RBAC
-	// check being at /apis/authorization.<domain>/v1/check: the domain of
-	// API, its first label off, unless set; pkg/auth's default without
-	// either.
-	APIDomain string `yaml:"api_domain"`
 }
 
 // check sets the defaults; basePath is api.base_path, {provider} replaced.
@@ -448,11 +460,6 @@ func (a *authConfig) check(basePath string) error {
 		a.Authorize = new(bool)
 		*a.Authorize = true
 	}
-	defer func() {
-		if _, domain, ok := strings.Cut(a.API, "."); ok && a.APIDomain == "" {
-			a.APIDomain = domain
-		}
-	}()
 	if !*a.Authorize || a.API != "" {
 		return nil
 	}

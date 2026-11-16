@@ -8,9 +8,13 @@ weight: 100
 
 ## What runs
 
+The service's own endpoints are under its root, `<root>/-/`: the base path
+up to `{namespace}`, a final `/namespaces` dropped, `/foreman/v1` for the
+default `/foreman/v1/namespaces/{namespace}`.
+
 ```sh
-curl -s localhost:8080/-/providers   # the namespaces' processes: state, started, last used, requests in flight, served, failed
-curl -s localhost:8080/-/metrics | grep ^tofu_api
+curl -s localhost:8080/foreman/v1/-/providers   # the namespaces' processes: state, started, last used, requests in flight, served, failed
+curl -s localhost:8080/foreman/v1/-/metrics | grep ^tofu_api
 ```
 
 | Metric | |
@@ -19,7 +23,7 @@ curl -s localhost:8080/-/metrics | grep ^tofu_api
 | `tofu_api_provider_starts_total{result}` | `ok`, or `failed` (an unknown namespace included) |
 | `tofu_api_provider_stops_total{reason}` | `idle`, `max_age`, `evicted`, `gone`, `shutdown` |
 
-The metrics have no namespace label, namespaces being unbounded: `/-/providers`
+The metrics have no namespace label, namespaces being unbounded: `<root>/-/providers`
 names them. A process stopping once its last call ends is still counted,
 no longer listed.
 

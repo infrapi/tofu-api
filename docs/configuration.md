@@ -8,7 +8,9 @@ weight: 40
 
 ```yaml
 # api:
-#   base_path: /{provider}/v1/namespaces/{namespace}   # the paths' start, as by default; {namespace} is required
+#   base_path: /{provider}/v1/namespaces/{namespace}   # the paths' start, as by default; {namespace} is required.
+#                                                      # What comes before it, a final /namespaces dropped, is the
+#                                                      # root: the service's own endpoints are under <root>/-/
 #   namespace_pattern: '^[a-z0-9][a-z0-9_-]{0,62}$'    # what a namespace matches, as by default; anchored
 provider:
   source: terraform-coop/foreman   # [host/]namespace/type, installed (see Providers)

@@ -179,6 +179,8 @@ func TestParseConfigBasePath(t *testing.T) {
 		"other parameter": "/{region}/{namespace}",
 		"gin parameter":   "/:region/{namespace}",
 		"operational":     "/-/{namespace}",
+		"- segment":       "/grafana/-/{namespace}",
+		"no root":         "/{namespace}/grafana",
 	} {
 		_, err := parseConfig(src(basePath), "grafana.yaml")
 		assert.ErrorContains(t, err, "api.base_path", name)
@@ -213,14 +215,14 @@ func TestParseConfigAuth(t *testing.T) {
 	src := func(basePath, auth string) []byte {
 		return fmt.Appendf(nil, "api:\n  base_path: %q\nauth:\n%sprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\nresources:\n  grafana_folder: {}\n", basePath, auth)
 	}
-	f, err := parseConfig(src("/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: https://auth.example.com\n"), "grafana.yaml")
+	f, err := parseConfig(src("/apis/grafana.infrapi.io/v1/namespaces/{namespace}", "  url: https://auth.example.com\n"), "grafana.yaml")
 	require.NoError(t, err)
 	assert.True(t, *f.Auth.Authorize, "the RBAC is asked unless authorize is false")
-	assert.Equal(t, "grafana.example.com", f.Auth.API, "the group of base_path")
+	assert.Equal(t, "grafana.infrapi.io", f.Auth.API, "the group of base_path")
 
-	f, err = parseConfig(src("/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  api: grafana.example.com\n  cache_ttl: 5m\n"), "grafana.yaml")
+	f, err = parseConfig(src("/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  api: grafana.infrapi.io\n  cache_ttl: 5m\n"), "grafana.yaml")
 	require.NoError(t, err)
-	assert.Equal(t, "grafana.example.com", f.Auth.API)
+	assert.Equal(t, "grafana.infrapi.io", f.Auth.API)
 	assert.Equal(t, 5*time.Minute, f.Auth.CacheTTL)
 
 	f, err = parseConfig(src("/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n  authorize: false\n"), "grafana.yaml")
@@ -228,8 +230,8 @@ func TestParseConfigAuth(t *testing.T) {
 	assert.False(t, *f.Auth.Authorize)
 
 	for name, c := range map[string][2]string{
-		"no url":      {"/apis/grafana.example.com/v1/namespaces/{namespace}", "  api: x\n"},
-		"not a URL":   {"/apis/grafana.example.com/v1/namespaces/{namespace}", "  url: auth.example.com\n"},
+		"no url":      {"/apis/grafana.infrapi.io/v1/namespaces/{namespace}", "  api: x\n"},
+		"not a URL":   {"/apis/grafana.infrapi.io/v1/namespaces/{namespace}", "  url: auth.example.com\n"},
 		"no group":    {"/grafana/v1/namespaces/{namespace}", "  url: https://auth.example.com\n"},
 		"group is ns": {"/apis/{namespace}/v1", "  url: https://auth.example.com\n"},
 	} {
@@ -238,15 +240,14 @@ func TestParseConfigAuth(t *testing.T) {
 	}
 }
 
-func TestParseConfigAuthAPIDomain(t *testing.T) {
-	src := func(auth string) []byte {
-		return fmt.Appendf(nil, "api:\n  base_path: /apis/grafana.example.com/v1/namespaces/{namespace}\nauth:\n%sprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\nresources:\n  grafana_folder: {}\n", auth)
+func TestAPIConfigRoot(t *testing.T) {
+	for basePath, want := range map[string]string{
+		"/grafana/v1/namespaces/{namespace}":                 "/grafana/v1",
+		"/apis/grafana.infrapi.io/v1/namespaces/{namespace}": "/apis/grafana.infrapi.io/v1",
+		"/orgs/{namespace}":                                  "/orgs",
+		"/orgs/{namespace}/folders":                          "/orgs",
+		"/namespaces/{namespace}":                            "",
+	} {
+		assert.Equal(t, want, apiConfig{BasePath: basePath}.Root(), basePath)
 	}
-	f, err := parseConfig(src("  url: https://auth.example.com\n"), "grafana.yaml")
-	require.NoError(t, err)
-	assert.Equal(t, "example.com", f.Auth.APIDomain, "the API group's domain")
-
-	f, err = parseConfig(src("  url: https://auth.example.com\n  api_domain: infra.example.org\n"), "grafana.yaml")
-	require.NoError(t, err)
-	assert.Equal(t, "infra.example.org", f.Auth.APIDomain)
 }

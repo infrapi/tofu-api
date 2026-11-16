@@ -374,7 +374,7 @@ func started(in *instance) bool {
 	}
 }
 
-// providerStatus is a namespace's provider process, as GET /-/providers lists
+// providerStatus is a namespace's provider process, as GET <root>/-/providers lists
 // it.
 type providerStatus struct {
 	Namespace string    `json:"namespace"`
@@ -405,7 +405,7 @@ func (pl *pool) status() []providerStatus {
 	return list
 }
 
-// providersOperation documents GET /-/providers in the specification of the
+// providersOperation documents GET <root>/-/providers in the specification of the
 // operational endpoints.
 var providersOperation = server.Operation{
 	Method: http.MethodGet, Path: "/-/providers", Summary: "The namespaces' provider processes",
@@ -432,8 +432,8 @@ var providersOperation = server.Operation{
 	},
 }
 
-// routes adds GET /-/providers, the namespaces' processes, beside the
-// server's own /-/ endpoints.
+// routes adds GET <root>/-/providers, the namespaces' processes, beside the
+// server's own <root>/-/ endpoints: r is the root's group.
 func (pl *pool) routes(r gin.IRouter) {
 	r.GET("/-/providers", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"max_providers": pl.max, "providers": pl.status()})

@@ -242,18 +242,19 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	}
 	var rbac *access
 	if f.Auth != nil {
-		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL, APIDomain: f.Auth.APIDomain})
+		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL})
 		if err != nil {
 			return err
 		}
-		// Every route added after the engine's own /-/ endpoints needs a
+		// Every route added after the engine's own <root>/-/ endpoints needs a
 		// token the service resolves.
 		opts = append(opts, server.WithAuth(client.Middleware()))
 		if *f.Auth.Authorize {
 			rbac = &access{checker: client, api: f.Auth.API}
 		}
 	}
-	engine, err := server.NewServerGin(cfg, opts...)
+	root := f.API.Root()
+	engine, err := server.NewServerGin(cfg, []string{root}, opts...)
 	if err != nil {
 		return err
 	}
@@ -261,7 +262,7 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	h.access = rbac
 	h.routes(engine)
 	if isPool {
-		pl.routes(engine)
+		pl.routes(engine.Group(root))
 	}
 
 	socket, err := listener.Listen(cfg)

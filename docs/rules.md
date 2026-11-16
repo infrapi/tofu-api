@@ -89,6 +89,7 @@ the service.
 
 No contract is kept in the repository: the service generates it at start
 from the file and the provider's schemas, and serves it at
-`/-/openapi/<provider>/v1.json` and in Swagger UI at `/-/docs`. `tofu-api gen`
+`<root>/-/openapi/<provider>/v1.json` and in Swagger UI at `<root>/-/docs`,
+`<root>` being `/<provider>/v1` by default (see [configuration](configuration.md)). `tofu-api gen`
 writes it without starting the service, or checks a file before it is
 deployed: it fails as the service would.

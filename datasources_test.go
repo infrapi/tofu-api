@@ -66,7 +66,7 @@ func newDataEngine(t *testing.T, p provider, rbac accessChecker) *gin.Engine {
 	e := gin.New()
 	h := newHandlers(testDataAPI(t), newShared(p, 10), time.Minute)
 	if rbac != nil {
-		h.access = &access{checker: rbac, api: "grafana.example.com"}
+		h.access = &access{checker: rbac, api: "grafana.infrapi.io"}
 	}
 	h.routes(e)
 	return e
@@ -128,7 +128,7 @@ func TestReadDataSourceAsksTheRBAC(t *testing.T) {
 	code, _ := doAs(t, e, "tok", http.MethodGet, "/grafana/v1/namespaces/acme/folders", "")
 	require.Equal(t, http.StatusOK, code)
 	require.Len(t, rbac.asked, 1)
-	assert.Equal(t, auth.AuthorizeRequest{Namespace: "acme", Api: "grafana.example.com", Resource: "folders", Verb: "list"}, rbac.asked[0])
+	assert.Equal(t, auth.AuthorizeRequest{Namespace: "acme", Api: "grafana.infrapi.io", Resource: "folders", Verb: "list"}, rbac.asked[0])
 }
 
 // The contract has a GET per data source, its arguments in the query, and
