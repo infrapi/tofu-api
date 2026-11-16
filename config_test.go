@@ -237,3 +237,16 @@ func TestParseConfigAuth(t *testing.T) {
 		assert.ErrorContains(t, err, "auth:", name)
 	}
 }
+
+func TestParseConfigAuthAPIDomain(t *testing.T) {
+	src := func(auth string) []byte {
+		return fmt.Appendf(nil, "api:\n  base_path: /apis/grafana.example.com/v1/namespaces/{namespace}\nauth:\n%sprovider:\n  binary_path: ./terraform-provider-grafana_v4.35.0\nresources:\n  grafana_folder: {}\n", auth)
+	}
+	f, err := parseConfig(src("  url: https://auth.example.com\n"), "grafana.yaml")
+	require.NoError(t, err)
+	assert.Equal(t, "example.com", f.Auth.APIDomain, "the API group's domain")
+
+	f, err = parseConfig(src("  url: https://auth.example.com\n  api_domain: infra.example.org\n"), "grafana.yaml")
+	require.NoError(t, err)
+	assert.Equal(t, "infra.example.org", f.Auth.APIDomain)
+}

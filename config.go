@@ -430,6 +430,11 @@ type authConfig struct {
 	// API is the API group the RBAC's rules name: the <group> of a
 	// base_path /apis/<group>/... unless set.
 	API string `yaml:"api"`
+	// APIDomain is the authentication service's own API domain, its RBAC
+	// check being at /apis/authorization.<domain>/v1/check: the domain of
+	// API, its first label off, unless set; pkg/auth's default without
+	// either.
+	APIDomain string `yaml:"api_domain"`
 }
 
 // check sets the defaults; basePath is api.base_path, {provider} replaced.
@@ -442,6 +447,11 @@ func (a *authConfig) check(basePath string) error {
 		a.Authorize = new(bool)
 		*a.Authorize = true
 	}
+	defer func() {
+		if _, domain, ok := strings.Cut(a.API, "."); ok && a.APIDomain == "" {
+			a.APIDomain = domain
+		}
+	}()
 	if !*a.Authorize || a.API != "" {
 		return nil
 	}

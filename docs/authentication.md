@@ -14,10 +14,11 @@ authentication service, as infrapi/lib's `pkg/auth` checks them:
 api:
   base_path: /apis/stacks.example.com/v1/namespaces/{namespace}
 auth:
-  url: https://auth.example.com    # resolves a token (POST /oauth2/userinfo), and its RBAC decides (pkg/auth's AuthorizePath)
+  url: https://auth.example.com    # resolves a token (POST /oauth2/userinfo), and its RBAC decides
   # cache_ttl: 1h                  # how long a token's identity is kept; -1 for not at all
   # authorize: true                # ask the RBAC for every request; false: a valid token is enough
   # api: stacks.example.com        # the API group the RBAC's rules name; base_path's /apis/<group>/ by default
+  # api_domain: example.com        # the service's own API domain, its check at /apis/authorization.<domain>/v1/check; api's, its first label off, by default
 ```
 
 - **Who**: a request without a token, or with one the service refuses, is

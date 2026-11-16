@@ -242,7 +242,7 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	}
 	var rbac *access
 	if f.Auth != nil {
-		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL})
+		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL, APIDomain: f.Auth.APIDomain})
 		if err != nil {
 			return err
 		}
