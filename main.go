@@ -267,7 +267,7 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	if isPool {
 		pl.routes(engine.Group(root))
 	}
-	if f.MCP != nil {
+	if f.MCP.enabled() {
 		// Tools call the routes above in process, with the caller's token.
 		opts, err := mcpOptions(f, a)
 		if err != nil {

@@ -41,6 +41,7 @@ func mcpEngine(t *testing.T, p provider, m *mcpConfig) string {
 	newHandlers(a, newShared(p, 10), time.Minute).routes(e)
 
 	f := configFile{Provider: providerConfig{Name: "grafana"}, MCP: m}
+	require.True(t, m.enabled())
 	opts, err := mcpOptions(f, a)
 	require.NoError(t, err)
 	mh, err := mcp.New(contract, e, opts)
@@ -81,6 +82,46 @@ func TestMCPTools(t *testing.T) {
 
 	s = mcpSession(t, mcpEngine(t, newFakeProvider(), &mcpConfig{Writes: true}))
 	assert.Equal(t, []string{"create_folder", "delete_folder", "get_folder", "plan_create_folder", "plan_update_folder", "update_folder"}, mcpTools(t, s))
+
+	s = mcpSession(t, mcpEngine(t, newFakeProvider(), nil))
+	assert.Equal(t, []string{"get_folder", "plan_create_folder", "plan_update_folder"}, mcpTools(t, s), "served without an mcp section")
+}
+
+func TestMCPDisabled(t *testing.T) {
+	off := false
+	assert.False(t, (&mcpConfig{Enabled: &off}).enabled())
+	assert.True(t, (*mcpConfig)(nil).enabled())
+	_, err := mcpOptions(configFile{MCP: &mcpConfig{Enabled: &off}}, testAPI(t))
+	assert.Error(t, err)
+}
+
+// Each resource type has a generated document, from its schema and rules,
+// and two prompts; a configured one of the same name replaces it.
+func TestMCPGenerated(t *testing.T) {
+	s := mcpSession(t, mcpEngine(t, newFakeProvider(), &mcpConfig{
+		Prompts: []mcpPrompt{{Name: "plan-create-folder", Text: "Mine."}},
+	}))
+	ctx := context.Background()
+	doc, err := s.ReadResource(ctx, &sdk.ReadResourceParams{URI: "doc://grafana_folder"})
+	require.NoError(t, err)
+	text := doc.Contents[0].Text
+	assert.Contains(t, text, "| `title` | string | you, required |")
+	assert.Contains(t, text, "default: `spec.title.replace(\" \", \"-\")`", "the rule's default")
+	assert.Contains(t, text, "at most 40 characters")
+	assert.Contains(t, text, "| `id` | string | the provider |")
+	assert.NotContains(t, text, "org_id", "hidden")
+	assert.NotContains(t, text, "`old`", "hidden")
+	assert.Contains(t, text, `"title": "example"`, "a minimal body")
+	assert.NotContains(t, text, "`create_folder`", "read only: no write tool named")
+
+	p, err := s.GetPrompt(ctx, &sdk.GetPromptParams{Name: "check-drift-folder"})
+	require.NoError(t, err)
+	assert.Contains(t, p.Messages[0].Content.(*sdk.TextContent).Text, "plan_update_folder")
+	p, err = s.GetPrompt(ctx, &sdk.GetPromptParams{Name: "plan-create-folder"})
+	require.NoError(t, err)
+	assert.Equal(t, "Mine.", p.Messages[0].Content.(*sdk.TextContent).Text, "the configured prompt")
+
+	assert.Contains(t, s.InitializeResult().Instructions, "doc://grafana_folder")
 }
 
 // A tool goes through the API: the rules apply, and a plan applies nothing.
@@ -128,6 +169,7 @@ func TestMCPContext(t *testing.T) {
 	assert.Contains(t, instructions, "grafana_folder")
 	assert.Contains(t, instructions, "read only")
 	assert.Contains(t, instructions, "A namespace is a tenant.")
+	assert.Contains(t, instructions, "doc://folders")
 
 	doc, err := s.ReadResource(context.Background(), &sdk.ReadResourceParams{URI: "doc://folders"})
 	require.NoError(t, err)
