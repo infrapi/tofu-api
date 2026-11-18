@@ -1,3 +1,9 @@
+---
+title: Dry run
+description: "?dryRun=true plans a POST or a PUT and applies nothing: what the request would change, and a resource's drift."
+weight: 85
+---
+
 # Dry run
 
 `?dryRun=true` on a `POST` or a `PUT` plans the request and applies nothing,

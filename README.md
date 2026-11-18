@@ -4,13 +4,15 @@
 > example's contract is generated from the provider's schemas, its calls not
 > yet tested against a Foreman.
 
-Exposes resource types of an OpenTofu-protocol provider as an HTTP API with
-no code per resource:
+Exposes resource types of an OpenTofu-protocol provider as an HTTP API, and
+as MCP tools for AI agents, with no code per resource:
 
 ```
 provider binary ──GetProviderSchema──► resource schemas ──► OpenAPI 3.0 contract
                                                               │
       POST /foreman/v1/namespaces/acme/host ──► validated ───┘──► pkg/tofu Create
+                                                              ▲
+      AI agent ──MCP──► /foreman/v1/-/mcp ── tools from the contract
 ```
 
 ## Why
@@ -21,6 +23,22 @@ tested by its users, complete in what matters for an API. tofu-api runs the
 provider over the plugin protocol, without Terraform, and what is left to
 write is one YAML file per provider. See [Why](docs/index.md#why) and
 [Limits](docs/limits.md).
+
+## For AI agents
+
+Every tofu-api is also an MCP server, at `<root>/-/mcp`: a tool per
+operation, each call going through the API with its user's token (RBAC,
+rules, contract), a document per resource type generated from the
+provider's schema, and prompts. Read only by default: an agent reads and
+plans (`plan_create_`, `plan_update_`), and writes only when the
+configuration allows it. See [MCP](docs/mcp.md), and
+[`examples/grafana/grafana.yaml`](examples/grafana/grafana.yaml), Grafana
+folders with an `mcp` section.
+
+```bash
+claude mcp add --transport http grafana http://localhost:8080/grafana/v1/-/mcp \
+  --header "Authorization: Bearer $TOKEN"
+```
 
 ## Run
 

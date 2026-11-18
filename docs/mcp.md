@@ -1,3 +1,9 @@
+---
+title: MCP
+description: "The API as MCP tools for AI agents, with generated documents and prompts per resource type."
+weight: 87
+---
+
 # MCP
 
 tofu-api also serves its API to AI agents over the
@@ -24,6 +30,9 @@ mcp:
       description: Check a folder against its spec
       text: Read the folder, then plan an update with the spec I give you, and show me the changes.
 ```
+
+A complete example, Grafana folders with their conventions as a document and
+a prompt: [`examples/grafana/grafana.yaml`](https://github.com/infrapi/tofu-api/blob/main/examples/grafana/grafana.yaml).
 
 ## Tools
 
