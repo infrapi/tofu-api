@@ -57,6 +57,7 @@ type configFile struct {
 	Types       map[string]typeRules `yaml:"resources"`
 	DataSources map[string]typeRules `yaml:"data_sources"`
 	Errors      []errorRuleSpec      `yaml:"errors"`
+	MCP         *mcpConfig           `yaml:"mcp"`
 }
 
 const (
@@ -221,6 +222,11 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 	if f.Auth != nil {
 		if err := f.Auth.check(f.API.BasePath); err != nil {
 			return configFile{}, fmt.Errorf("%s: auth: %w", filename, err)
+		}
+	}
+	if f.MCP != nil {
+		if err := f.MCP.load(filepath.Dir(filename)); err != nil {
+			return configFile{}, fmt.Errorf("%s: mcp: %w", filename, err)
 		}
 	}
 	if f.Namespaces != nil {

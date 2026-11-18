@@ -1,0 +1,54 @@
+# tofu-api serving the Grafana provider: folders as an API, and as MCP tools
+# for AI agents.
+#
+#   scripts/fetch-provider.sh grafana/grafana 4.35.0
+#   GRAFANA_URL=http://localhost:3000 GRAFANA_AUTH=admin:admin \
+#     tofu-api serve -config examples/grafana/grafana.yaml
+#
+# The paths start with /grafana/v1/namespaces/{namespace}; the MCP endpoint
+# is /grafana/v1/-/mcp:
+#
+#   claude mcp add --transport http grafana http://localhost:8080/grafana/v1/-/mcp
+
+provider:
+  # As scripts/fetch-provider.sh prints it, relative to where tofu-api runs.
+  # Or, installed by tofu-api from a network mirror (see docs/install.md):
+  #   source: grafana/grafana
+  #   version: 4.35.0
+  binary_path: providers/registry.terraform.io/grafana/grafana/4.35.0/linux_amd64/terraform-provider-grafana_v4.35.0
+  config:
+    url: ${GRAFANA_URL}
+    auth: ${GRAFANA_AUTH}
+
+resources:
+  grafana_folder:
+    attributes:
+      # The uid derives from the title unless given: Ops Team is Ops-Team.
+      uid:
+        default: spec.title.replace(" ", "-")
+        pattern: '^[a-zA-Z0-9_-]{1,40}$'
+        maxLength: 40
+
+data_sources:
+  grafana_folders: {}
+
+errors:
+  - code: already_exists
+    match: '\(status 412\)'
+    status: 409
+
+# Served without this section too, read only. It adds what only you know;
+# the tools, a document per resource type and the prompts are generated.
+mcp:
+  # writes: true                  # the agent may also create, update, delete
+  instructions: |
+    Folders group a team's dashboards and alert rules. Give a folder a short
+    title: its uid derives from it.
+  documents:
+    - name: folders
+      title: Folder conventions
+      file: folders.md            # relative to this file
+  prompts:
+    - name: new-team-folder
+      description: Plan the folder of a new team
+      text: Plan the creation of a folder for the team I name, following doc://folders, and show me the plan. Create nothing.

@@ -1,6 +1,6 @@
 ---
 title: tofu-api
-description: Exposes resource types of an OpenTofu-protocol provider as an HTTP API with an OpenAPI contract and no code per resource.
+description: Exposes resource types of an OpenTofu-protocol provider as an HTTP API with an OpenAPI contract, and as MCP tools for AI agents, with no code per resource.
 weight: 10
 ---
 
@@ -10,20 +10,24 @@ weight: 10
 > example's contract is generated from the provider's schemas, its calls not
 > yet tested against a Foreman.
 
-Exposes resource types of an OpenTofu-protocol provider as an HTTP API with
-no code per resource:
+Exposes resource types of an OpenTofu-protocol provider as an HTTP API, and
+as MCP tools for AI agents, with no code per resource:
 
 ```
 provider binary ──GetProviderSchema──► resource schemas ──► OpenAPI 3.0 contract
                                                               │
       POST /foreman/v1/namespaces/acme/host ──► validated ───┘──► pkg/tofu Create
+                                                              ▲
+      AI agent ──MCP──► /foreman/v1/-/mcp ── tools from the contract
 ```
 
 - the contract is generated from each type's schema, so the provider is the
   only authority on fields, types, required and sensitive attributes;
 - `infrapi/lib/pkg/server` loads it, serves it at `<root>/-/docs` (`/foreman/v1/-/docs` by default) and rejects any
   request that does not match it, before a handler runs;
-- the handlers call `pkg/tofu`, which drives the provider.
+- the handlers call `pkg/tofu`, which drives the provider;
+- the same API is served to AI agents over the Model Context Protocol, at
+  `<root>/-/mcp`: see [For AI agents](#for-ai-agents).
 
 ## Why
 
@@ -48,7 +52,7 @@ A Terraform provider is that client, already written:
   product's errors.
 
 tofu-api runs the provider as Terraform does, over the plugin protocol, but
-without Terraform: no HCL, no plan, no state file. Callers that are not
+without Terraform: no HCL, no state file. Callers that are not
 Terraform, such as a portal, a script or another service, get a plain REST
 API with an OpenAPI contract. What is left to write is what is specific to
 the platform, in one YAML file per provider rather than in code:
@@ -60,9 +64,33 @@ the platform, in one YAML file per provider rather than in code:
   what those credentials allow;
 - which HTTP error each of the product's errors stands for.
 
-The limits come with it: the API does what the provider does, resources but
-no data sources and no list (the service keeps nothing to list), and a bug
-in the provider is a bug in the API. See [Limits](limits.md).
+The limits come with it: the API does what the provider does, no list of a
+type's resources (the service keeps nothing to list), and a bug in the
+provider is a bug in the API. See [Limits](limits.md).
+
+## For AI agents
+
+Every tofu-api is also an MCP server, natively: no plugin, no code, no
+separate service. An agent such as Claude Code connects to `<root>/-/mcp`
+with its user's token and gets:
+
+- **a tool per operation**, generated from the contract: `get_` to read a
+  resource, `read_` for a data source, `plan_create_` and `plan_update_` to
+  see what a change would do, and, with `mcp.writes: true`, `create_`,
+  `update_`, `delete_`;
+- **the same API, not a copy of it**: each call goes through the service's
+  own handlers, so the token, the RBAC, the rules and the contract's checks
+  apply as for any HTTP client, and the agent can do what its user can, no
+  more;
+- **context generated from the provider**: a document per resource type
+  and data source (its attributes, who sets them, the rules' constraints, a
+  minimal body), prompts to check a resource's drift or plan a new one, and
+  instructions on how the tools fit together;
+- **what only you know**, in the configuration: instructions, documents and
+  prompts of your own.
+
+Read only by default: an agent reads and plans, and changes nothing until
+the configuration allows it. See [MCP](mcp.md).
 
 ## Pages
 
@@ -75,6 +103,8 @@ in the provider is a bug in the API. See [Limits](limits.md).
 | [Namespaces](namespaces.md) | a provider process per namespace, credentials from Vault |
 | [Data sources](data-sources.md) | read-only data sources, arguments in the query |
 | [Rules](rules.md) | attribute rules, error rules, CEL expressions |
+| [Dry run](dry-run.md) | `?dryRun=true`: plan a create or an update, see a resource's drift |
+| [MCP](mcp.md) | the API as MCP tools for AI agents, with generated documents and prompts |
 | [Mapping](mapping.md) | provider schema to OpenAPI, and why the service keeps no state |
 | [Operations](operations.md) | provider processes, metrics, concurrency |
 | [Limits](limits.md) | known limits and what is not covered |

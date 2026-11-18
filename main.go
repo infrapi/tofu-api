@@ -26,10 +26,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/infrapi/lib/pkg/auth"
 	"github.com/infrapi/lib/pkg/config"
 	"github.com/infrapi/lib/pkg/listener"
 	"github.com/infrapi/lib/pkg/logger"
+	"github.com/infrapi/lib/pkg/mcp"
 	"github.com/infrapi/lib/pkg/server"
 	"github.com/infrapi/lib/pkg/tofu"
 )
@@ -264,12 +267,30 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	if isPool {
 		pl.routes(engine.Group(root))
 	}
+	var mh *mcp.Handler
+	if f.MCP.enabled() {
+		// Tools call the routes above in process, with the caller's token.
+		opts, err := mcpOptions(f, a)
+		if err != nil {
+			return err
+		}
+		if mh, err = mcp.New(contract, engine, opts); err != nil {
+			return err
+		}
+		engine.Any(root+"/-/mcp", gin.WrapH(mh))
+	}
 
 	socket, err := listener.Listen(cfg)
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{Handler: engine, ReadHeaderTimeout: 10 * time.Second}
+	open := newOpenConns(engine)
+	srv := &http.Server{Handler: open, ReadHeaderTimeout: 10 * time.Second, ConnState: open.track}
+	if mh != nil {
+		// The MCP clients' requests held open to be notified last until they
+		// leave: ended as the shutdown starts.
+		srv.RegisterOnShutdown(mh.Close)
+	}
 	served := make(chan error, 1)
 	go func() {
 		log.Info("listening", logger.String("addr", socket.Addr().String()))
@@ -283,7 +304,16 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	}
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return srv.Shutdown(shutdown)
+	log.Info("stopping", logger.Int("connections", open.count()))
+	if err := srv.Shutdown(shutdown); err != nil {
+		// What held the shutdown: the connections still active, and the
+		// requests they were serving.
+		for _, c := range open.active() {
+			log.Warn("still active at shutdown", logger.String("remote", c.remote), logger.String("request", c.request), logger.String("since", c.since))
+		}
+		return errors.Join(fmt.Errorf("shutdown: %w", err), srv.Close())
+	}
+	return nil
 }
 
 // startProviders starts the provider that serves every namespace, or, with
