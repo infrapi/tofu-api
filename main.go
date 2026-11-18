@@ -26,10 +26,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/infrapi/lib/pkg/auth"
 	"github.com/infrapi/lib/pkg/config"
 	"github.com/infrapi/lib/pkg/listener"
 	"github.com/infrapi/lib/pkg/logger"
+	"github.com/infrapi/lib/pkg/mcp"
 	"github.com/infrapi/lib/pkg/server"
 	"github.com/infrapi/lib/pkg/tofu"
 )
@@ -263,6 +266,18 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	h.routes(engine)
 	if isPool {
 		pl.routes(engine.Group(root))
+	}
+	if f.MCP != nil {
+		// Tools call the routes above in process, with the caller's token.
+		opts, err := mcpOptions(f, a)
+		if err != nil {
+			return err
+		}
+		mh, err := mcp.New(contract, engine, opts)
+		if err != nil {
+			return err
+		}
+		engine.Any(root+"/-/mcp", gin.WrapH(mh))
 	}
 
 	socket, err := listener.Listen(cfg)
