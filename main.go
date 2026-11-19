@@ -245,13 +245,16 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	}
 	var rbac *access
 	if f.Auth != nil {
-		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL})
+		// PublicURL makes the API a resource for OAuth clients: a token of
+		// Kayra's authorization server must be for it, and a 401 names its
+		// metadata (WithProtectedResource), which names Kayra
+		client, err := auth.NewClient(auth.ClientOptions{BaseURL: f.Auth.URL, CacheTTL: f.Auth.CacheTTL, PublicURL: cfg.AppUrl})
 		if err != nil {
 			return err
 		}
 		// Every route added after the engine's own <root>/-/ endpoints needs a
 		// token the service resolves.
-		opts = append(opts, server.WithAuth(client.Middleware()))
+		opts = append(opts, server.WithAuth(client.Middleware()), server.WithProtectedResource(client.AuthorizationServer))
 		if *f.Auth.Authorize {
 			rbac = &access{checker: client, api: f.Auth.API}
 		}
