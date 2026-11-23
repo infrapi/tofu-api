@@ -81,3 +81,11 @@ it with `@`; a prompt is the command `/mcp__<server>__<prompt>`.
 The agent sends its user's bearer token; tofu-api passes it on to every call,
 so the agent can do what its user can, no more. With `auth`, the endpoint
 itself also requires a valid token.
+
+## Several APIs behind one endpoint
+
+[ulgen](https://infrapi.github.io/ulgen/) puts this endpoint behind a single
+MCP endpoint, next to other MCP servers. The agent logs in at Kayra once and
+gets every server's tools there, with the namespace as their `tenant`
+argument. ulgen passes the caller's token on to tofu-api, which still checks
+every call itself: `authorize: upstream`, `tenant: {argument: namespace}`.
