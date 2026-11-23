@@ -38,7 +38,7 @@ vault kv put secret/tofu-api/foreman/acme organization_id=3 location_id=2 \
 ```
 
 A namespace exists for the service once its secret does, which needs its
-tenant in the product first (an organization in Foreman or Grafana):
+own space in the product first (an organization in Foreman or Grafana):
 onboarding comes before the API, with an administrator's credentials the
 service never holds.
 
@@ -47,9 +47,9 @@ A namespace whose engine the AppRole's policy does not cover is a 502
 missing.
 
 - **Isolation comes from the credentials.** With credentials limited to the
-  namespace's tenant, such as a Grafana service account token of its org,
+  namespace's organization in the product, such as a Grafana service account token of its org,
   the provider of `acme` reaches nothing else, whatever the request says;
-  with admin credentials, an id in the body still reaches any tenant.
+  with admin credentials, an id in the body still reaches any organization.
 - **A namespace without a secret is a 404.** Adding one is a `vault kv put`,
   without restarting the service.
 - **A process starts on its namespace's first request** (about 0.4 s for

@@ -21,7 +21,7 @@ import (
 //	mcp:
 //	  enabled: true
 //	  instructions: |
-//	    A namespace is a tenant. Plan before you change a folder.
+//	    A namespace is a team's Grafana organization. Plan before you change a folder.
 //	  writes: false                   # true: the agent may create, update and delete
 //	  documents:
 //	    - name: folders

@@ -160,7 +160,7 @@ func TestMCPPlan(t *testing.T) {
 // configured ones; documents and prompts are offered.
 func TestMCPContext(t *testing.T) {
 	s := mcpSession(t, mcpEngine(t, newFakeProvider(), &mcpConfig{
-		Instructions: "A namespace is a tenant.",
+		Instructions: "A namespace is a team's Grafana organization.",
 		Documents:    []mcpDocument{{Name: "folders", Content: "# Folders"}},
 		Prompts:      []mcpPrompt{{Name: "check-drift", Text: "Plan the folder."}},
 	}))
@@ -168,7 +168,7 @@ func TestMCPContext(t *testing.T) {
 	assert.Contains(t, instructions, `Terraform provider "grafana"`)
 	assert.Contains(t, instructions, "grafana_folder")
 	assert.Contains(t, instructions, "read only")
-	assert.Contains(t, instructions, "A namespace is a tenant.")
+	assert.Contains(t, instructions, "A namespace is a team's Grafana organization.")
 	assert.Contains(t, instructions, "doc://folders")
 
 	doc, err := s.ReadResource(context.Background(), &sdk.ReadResourceParams{URI: "doc://folders"})

@@ -19,7 +19,7 @@ rules. The `mcp` section is optional: it adds what only you know.
 mcp:
   enabled: true                   # false: no MCP endpoint
   instructions: |                 # added to what tofu-api tells every agent
-    A namespace is a tenant. Folders hold a team's dashboards.
+    A namespace is a team's Grafana organization. Folders hold its dashboards.
   writes: false                   # true: the agent may also create, update and delete
   documents:                      # context, offered as resources doc://<name>
     - name: folders
