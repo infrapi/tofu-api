@@ -55,8 +55,12 @@ The whole walkthrough is in [Getting started](docs/getting-started.md).
 
 ## Install
 
-Each [release](https://github.com/infrapi/tofu-api/releases) has the binary
-for linux amd64 and arm64, and RPM and DEB packages: see [Install](docs/install.md).
+```bash
+bin install github.com/infrapi/tofu-api ~/.local/bin/tofu-api
+```
+
+Or the RPM and DEB packages, the container image `ghcr.io/infrapi/tofu-api`,
+or `go install`: see [Install](docs/install.md).
 
 ## Documentation
 

@@ -6,10 +6,23 @@ weight: 30
 
 # Install
 
-Each [release](https://github.com/infrapi/tofu-api/releases) has the binary
-for linux amd64 and arm64, and RPM and DEB packages. A package holds the
-binary and a systemd template, an instance per provider, run as the
-`tofu-api` user:
+`tofu-api` is published on every
+[release](https://github.com/infrapi/tofu-api/releases) for Linux: an
+archive per architecture (`tofu-api_<version>_linux_<arch>`), RPM and DEB
+packages, with `checksums.txt`. Install it with
+[bin](https://github.com/marcosnils/bin/), which picks the archive matching
+your OS and architecture, puts the binary on your `PATH` and tracks it for
+`bin update`:
+
+```bash
+bin install github.com/infrapi/tofu-api ~/.local/bin/tofu-api
+tofu-api version
+```
+
+## Or the rpm and deb packages
+
+A package holds the binary and a systemd template, an instance per provider,
+run as the `tofu-api` user:
 
 | File | What |
 |---|---|
@@ -22,16 +35,17 @@ binary and a systemd template, an instance per provider, run as the
 None is shipped, and nothing in the package names a provider:
 `/usr/share/doc/tofu-api/examples/` has an `.env` and a `.secrets`, and a
 provider's file starts from this repository's `examples/`. The provider's
-binary is not in the package either: tofu-api installs it, or
-`binary_path` names one already there.
+binary is not in the package either: tofu-api installs it, or `binary_path`
+names one already there.
 
-## Container image
+## Or the container image
 
 Every release also publishes an image, `ghcr.io/infrapi/tofu-api`, for
 `linux/amd64` and `linux/arm64`, tagged with the version
-(`<major>.<minor>.<patch>`), its minor and `latest`. A container serves one
-provider, as a systemd instance does. It runs as an unprivileged user (uid
-10001), and reads:
+(`<major>.<minor>.<patch>`), its minor (`<major>.<minor>`) and `latest`: pin
+one of the first two in a deployment. It runs as an unprivileged user (uid
+10001). A container serves one provider, as a systemd instance does, and
+reads:
 
 | Path | What |
 |---|---|
@@ -51,6 +65,24 @@ podman run --rm \
   -v tofu-api-providers:/var/lib/tofu-api \
   --env-file ./grafana.secrets -p 8080:8080 ghcr.io/infrapi/tofu-api:latest
 ```
+
+## Or with Go
+
+With Go 1.27.4 or later:
+
+```bash
+go install github.com/infrapi/tofu-api@latest
+```
+
+<details>
+<summary>Building from source instead</summary>
+
+```bash
+git clone https://github.com/infrapi/tofu-api && cd tofu-api
+go build -o tofu-api .
+```
+
+</details>
 
 ## Providers
 
