@@ -75,7 +75,7 @@ func (m *mcpConfig) load(dir string) error {
 			if !filepath.IsAbs(path) {
 				path = filepath.Join(dir, path)
 			}
-			b, err := os.ReadFile(path) // #nosec G304 -- a path of the operator's configuration
+			b, err := os.ReadFile(path) // #nosec G304 G703 -- a path of the operator's configuration
 			if err != nil {
 				return fmt.Errorf("%s %s: %w", kind, name, err)
 			}
