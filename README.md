@@ -42,16 +42,27 @@ claude mcp add --transport http grafana http://localhost:8080/grafana/v1/-/mcp \
 
 ## Run
 
-[`examples/foreman/foreman.yaml`](examples/foreman/foreman.yaml) exposes
-hosts, hostgroups, domains and subnets in Foreman, a namespace per
-organization.
+Install the binary, download a provider, describe the API in one file:
 
 ```bash
-go run . gen -config examples/foreman/foreman.yaml -o foreman-v1.json   # the contract only: no Foreman needed
-INFRAPI_CONFIG_DOTENV_FILE=app.env go run . serve -config examples/foreman/foreman.yaml
+bin install github.com/infrapi/tofu-api ~/.local/bin/tofu-api
 ```
 
-The whole walkthrough is in [Getting started](docs/getting-started.md).
+```yaml
+# grafana.yaml
+provider:
+  binary_path: providers/terraform-provider-grafana_v4.35.0
+  config: {url: "${GRAFANA_URL}", auth: "${GRAFANA_AUTH}"}
+resources:
+  grafana_folder: {}
+```
+
+```bash
+INFRAPI_CONFIG_DOTENV_FILE=grafana.env tofu-api serve -config grafana.yaml
+curl -X POST localhost:8080/grafana/v1/namespaces/acme/folder -d '{"title": "Ops Team"}' -H 'Content-Type: application/json'
+```
+
+The whole walkthrough, from nothing, is in [Getting started](docs/getting-started.md).
 
 ## Install
 
@@ -67,7 +78,7 @@ or `go install`: see [Install](docs/install.md).
 | Page | What |
 |---|---|
 | [Overview](docs/index.md) | what tofu-api is, and why a provider |
-| [Getting started](docs/getting-started.md) | run the service with the Foreman example, generate a contract |
+| [Getting started](docs/getting-started.md) | install, download a provider, write one file: an API over Grafana folders, no code |
 | [Install](docs/install.md) | release packages, files under `/etc/tofu-api`, installing providers from a mirror |
 | [Configuration](docs/configuration.md) | the per-provider YAML file |
 | [Authentication](docs/authentication.md) | bearer tokens and RBAC with `auth` |

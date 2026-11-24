@@ -96,7 +96,7 @@ the configuration allows it. See [MCP](mcp.md).
 
 | Page | What |
 |---|---|
-| [Getting started](getting-started.md) | run the service with the Foreman example, generate a contract |
+| [Getting started](getting-started.md) | install, download a provider, write one file: an API over Grafana folders, no code |
 | [Install](install.md) | release packages, files under `/etc/tofu-api`, installing providers from a mirror |
 | [Configuration](configuration.md) | the per-provider YAML file |
 | [Authentication](authentication.md) | bearer tokens and RBAC with `auth` |
