@@ -33,7 +33,12 @@ type access struct {
 // token; the decision is never cached, so an edited role applies to the
 // next request.
 func (h *handlers) authorize(t string) gin.HandlerFunc {
-	resource := h.api.segment(t)
+	return h.authorizeResource(h.api.segment(t), func(c *gin.Context) bool { return c.Param("id") != "" })
+}
+
+// authorizeResource is authorize for resource, hasID telling a GET of one
+// item (get) from a list.
+func (h *handlers) authorizeResource(resource string, hasID func(*gin.Context) bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
 		token = strings.TrimSpace(token)
@@ -41,7 +46,7 @@ func (h *handlers) authorize(t string) gin.HandlerFunc {
 			server.AbortError(c, infraerrors.New(http.StatusUnauthorized, "tofu-api.authorize", "missing bearer token"))
 			return
 		}
-		verb, err := auth.VerbFor(c.Request.Method, c.Param("id") != "")
+		verb, err := auth.VerbFor(c.Request.Method, hasID(c))
 		if err != nil {
 			server.AbortError(c, infraerrors.New(http.StatusMethodNotAllowed, "tofu-api.authorize", "%s", err))
 			return

@@ -38,6 +38,8 @@ type mcpConfig struct {
 	Writes       bool          `yaml:"writes"`
 	Documents    []mcpDocument `yaml:"documents"`
 	Prompts      []mcpPrompt   `yaml:"prompts"`
+	// Bridges are other MCP servers whose tools the API serves (bridges.go).
+	Bridges []bridgeConfig `yaml:"bridges"`
 }
 
 type mcpDocument struct {
@@ -118,7 +120,7 @@ func (m *mcpConfig) enabled() bool {
 // tools map to the provider and a document per type, then the configured
 // context, whose documents and prompts replace generated ones of the same
 // name.
-func mcpOptions(f configFile, a *api) (mcp.Options, error) {
+func mcpOptions(f configFile, a *api, bs *bridges) (mcp.Options, error) {
 	m := f.MCP
 	if m == nil {
 		m = &mcpConfig{}
@@ -179,6 +181,11 @@ func mcpOptions(f configFile, a *api) (mcp.Options, error) {
 	if len(own) > 0 {
 		b.WriteString("Also read, when it bears on the request: " + strings.Join(own, ", ") + ".\n")
 	}
+	if bs != nil {
+		if d := bs.describe(f); d != "" {
+			b.WriteString("\n" + d)
+		}
+	}
 	if m.Instructions != "" {
 		b.WriteString("\n" + m.Instructions)
 	}
@@ -188,6 +195,9 @@ func mcpOptions(f configFile, a *api) (mcp.Options, error) {
 		Version:      version(),
 		Instructions: b.String(),
 		Writes:       m.Writes,
+	}
+	if bs != nil {
+		opts.Tools = bs.tools()
 	}
 	for _, name := range sortedKeys(docs) {
 		opts.Documents = append(opts.Documents, docs[name])

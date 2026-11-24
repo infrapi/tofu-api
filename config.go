@@ -228,6 +228,9 @@ func parseConfig(src []byte, filename string) (configFile, error) {
 		if err := f.MCP.load(filepath.Dir(filename)); err != nil {
 			return configFile{}, fmt.Errorf("%s: mcp: %w", filename, err)
 		}
+		if err := f.checkBridges(); err != nil {
+			return configFile{}, fmt.Errorf("%s: mcp.%w", filename, err)
+		}
 	}
 	if f.Namespaces != nil {
 		if err := f.Namespaces.check(); err != nil {

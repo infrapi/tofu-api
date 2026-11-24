@@ -230,11 +230,22 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	}
 	logger.SetDefault(log)
 
-	ps, closeProviders, err := startProviders(ctx, f)
+	ps, configs, closeProviders, err := startProviders(ctx, f)
 	if err != nil {
 		return err
 	}
 	defer func() { err = errors.Join(err, closeProviders()) }()
+
+	// The bridged MCP servers' tools are routes of the API: in the
+	// contract it serves and enforces, and Kayra reads.
+	bs, err := startBridges(ctx, f, configs, os.LookupEnv)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, bs.close()) }()
+	if contract, err = bs.contract(contract); err != nil {
+		return err
+	}
 
 	opts := []server.Option{server.WithOpenAPI(server.OpenAPISpec{
 		Name: f.Provider.Name + " v1", Path: f.Provider.Name + "/v1.json", Content: contract,
@@ -267,20 +278,23 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	h := newHandlers(a, ps, f.Provider.Timeout)
 	h.access = rbac
 	h.routes(engine)
+	if err := bs.routes(engine, h); err != nil {
+		return err
+	}
 	if isPool {
 		pl.routes(engine.Group(root))
 	}
 	var mh *mcp.Handler
 	if f.MCP.enabled() {
 		// Tools call the routes above in process, with the caller's token.
-		opts, err := mcpOptions(f, a)
+		opts, err := mcpOptions(f, a, bs)
 		if err != nil {
 			return err
 		}
 		if mh, err = mcp.New(contract, engine, opts); err != nil {
 			return err
 		}
-		engine.Any(root+"/-/mcp", gin.WrapH(mh))
+		engine.Any(root+server.MCPPath, gin.WrapH(mh))
 	}
 
 	socket, err := listener.Listen(cfg)
@@ -319,32 +333,43 @@ func serve(ctx context.Context, f configFile, a *api, contract []byte) (err erro
 	return nil
 }
 
+// configure configures p with config, the keys only bridges read left out.
+func configure(ctx context.Context, p *tofu.Provider, config map[string]any, bridgeKeys map[string]bool) error {
+	schema, err := p.ConfigSchema()
+	if err != nil {
+		return err
+	}
+	return p.Configure(ctx, "", providerOnly(config, schema, bridgeKeys))
+}
+
 // startProviders starts the provider that serves every namespace, or, with
 // namespaces configured, the pool that starts one per namespace on demand.
-func startProviders(ctx context.Context, f configFile) (providers, func() error, error) {
+func startProviders(ctx context.Context, f configFile) (providers, *namespaceConfigs, func() error, error) {
 	base, err := f.Provider.resolved(os.LookupEnv)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	configs := &namespaceConfigs{base: base, ttl: bridgeCredentialTTL, now: time.Now}
 	if f.Namespaces == nil {
 		p, err := tofu.Start(ctx, f.Provider.Name, f.Provider.BinaryPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
-		if err := p.Configure(ctx, "", base); err != nil {
-			return nil, nil, errors.Join(err, p.Close())
+		if err := configure(ctx, p, base, f.bridgeKeys()); err != nil {
+			return nil, nil, nil, errors.Join(err, p.Close())
 		}
-		return newShared(p, f.Provider.Parallelism), p.Close, nil
+		return newShared(p, f.Provider.Parallelism), configs, p.Close, nil
 	}
 
 	vc, err := f.Namespaces.Vault.resolved(os.LookupEnv)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	v, err := newNamespaceSecrets(ctx, vc, 0)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	configs.secret = v.namespaceConfig
 	pl := newPool(func(ctx context.Context, namespace string) (process, error) {
 		secret, err := v.namespaceConfig(ctx, namespace)
 		if err != nil {
@@ -356,11 +381,11 @@ func startProviders(ctx context.Context, f configFile) (providers, func() error,
 		}
 		config := maps.Clone(base)
 		maps.Copy(config, secret)
-		if err := p.Configure(ctx, "", config); err != nil {
+		if err := configure(ctx, p, config, f.bridgeKeys()); err != nil {
 			return nil, errors.Join(err, p.Close())
 		}
 		return p, nil
 	}, *f.Namespaces, f.Provider.Parallelism)
 	go pl.sweepEvery(ctx, min(f.Namespaces.Idle, f.Namespaces.MaxAge)/4)
-	return pl, pl.Close, nil
+	return pl, configs, pl.Close, nil
 }

@@ -7,7 +7,7 @@ require (
 	github.com/getkin/kin-openapi v0.153.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hashicorp/hcl v1.0.0
-	github.com/infrapi/lib v0.21.0
+	github.com/infrapi/lib v0.22.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/stretchr/testify v1.12.1

@@ -82,6 +82,73 @@ The agent sends its user's bearer token; tofu-api passes it on to every call,
 so the agent can do what its user can, no more. With `auth`, the endpoint
 itself also requires a valid token.
 
+## Bridged MCP servers
+
+`mcp.bridges` serves the tools of other MCP servers as part of the API.
+mcp-grafana, for one, knows nothing of namespaces or RBAC: it runs with
+whatever credential it is given. Bridged, each of its tools is a route of
+the API, authorized as one of its resources, and called with the
+namespace's own provider configuration, the one the provider process of the
+namespace is configured with.
+
+```yaml
+provider:
+  config:
+    url: ${GRAFANA_URL}             # and, per namespace, its secret: auth
+mcp:
+  bridges:
+    - name: grafana
+      url: http://127.0.0.1:8000/mcp
+      tools:                        # first match wins; a tool no rule selects is not bridged
+        - {match: "query_prometheus.*|list_prometheus_.*", resource: mcp-prometheus}
+        - {match: "query_loki.*|list_loki_.*", resource: mcp-loki}
+      # writes: true                # the tools that are not read-only too
+      headers:                      # every request, ${VAR} from the environment
+        Authorization: Bearer ${MCP_GRAFANA_TOKEN}
+      call_headers:                 # each call: a key of the namespace's configuration
+        X-Grafana-Service-Account-Token: auth
+        X-Grafana-Org-Id: grafana_org_id   # a key only bridges read
+      # timeout: 5m
+      # protocol_version: 2025-06-18
+```
+
+Each resource is one route, `{tool}` one of its tools:
+
+| Route | Tools | RBAC |
+|-------|-------|------|
+| `GET <base>/<resource>/{tool}?arguments=<JSON object>` | the read-only ones | `get` on `<resource>` |
+| `POST <base>/<resource>/{tool}`, the arguments the body | the others, with `writes` | `create` on `<resource>` |
+
+A resource is named `mcp-<family>`: a role reads as what it grants, and a
+bridged family never shares a resource with one of the API's resource types
+or data sources (a route of the contract under the same resource is refused
+at start).
+
+The routes are in the contract the service serves at start, which Kayra
+reads: a role granting `mcp-prometheus` and not `mcp-loki` on the API gives
+the Prometheus tools and not the Loki ones. `tofu-api gen` writes the contract
+without them: they come from the bridged server, listed at start.
+
+An agent sees each bridged tool as a tool of this server, with its own
+arguments and a `namespace`.
+
+`call_headers` reads the namespace's configuration: `provider.config` with
+the namespace's secret over it. A key a bridge reads that the provider's
+configuration block does not have stays in the secret for the bridges only,
+and is not passed to the provider: `grafana_org_id`, for mcp-grafana's
+`X-Grafana-Org-Id`, which the Grafana provider refuses beside a service
+account token (`org_id is only supported with basic auth`). Without it,
+mcp-grafana's tools that go through Grafana's Kubernetes API fail outside
+org 1 (`API key does not belong to the requested organization`). Any other
+key the provider does not know is still an error.
+
+The namespace's configuration is read again from Vault after a minute, so a
+rotated credential applies within one. A namespace whose configuration lacks
+a key of `call_headers` is a `502 upstream_auth`; a tool's own error, a
+`422 tool_error`; the bridged server down, a retryable `502`.
+
+See lib's [mcp/bridge](https://infrapi.github.io/lib/packages/mcp/#bridging-another-mcp-server).
+
 ## Several APIs behind one endpoint
 
 [ulgen](https://infrapi.github.io/ulgen/) puts this endpoint behind a single

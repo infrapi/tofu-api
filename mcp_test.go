@@ -42,7 +42,7 @@ func mcpEngine(t *testing.T, p provider, m *mcpConfig) string {
 
 	f := configFile{Provider: providerConfig{Name: "grafana"}, MCP: m}
 	require.True(t, m.enabled())
-	opts, err := mcpOptions(f, a)
+	opts, err := mcpOptions(f, a, nil)
 	require.NoError(t, err)
 	mh, err := mcp.New(contract, e, opts)
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestMCPDisabled(t *testing.T) {
 	off := false
 	assert.False(t, (&mcpConfig{Enabled: &off}).enabled())
 	assert.True(t, (*mcpConfig)(nil).enabled())
-	_, err := mcpOptions(configFile{MCP: &mcpConfig{Enabled: &off}}, testAPI(t))
+	_, err := mcpOptions(configFile{MCP: &mcpConfig{Enabled: &off}}, testAPI(t), nil)
 	assert.Error(t, err)
 }
 
