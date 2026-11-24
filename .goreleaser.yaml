@@ -76,6 +76,33 @@ nfpms:
 checksum:
   name_template: checksums.txt
 
+# The container image, multi-platform, on every release: the binary above
+# in the Dockerfile at the repository root. Tags: the version (0.5.0), its
+# minor (0.5) and latest, the last two only for a release that is not a
+# pre-release. The CI logs in to ghcr.io first.
+dockers_v2:
+  - id: tofu-api
+    ids: [tofu-api]
+    dockerfile: Dockerfile
+    images:
+      - ghcr.io/infrapi/tofu-api
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}{{ .Major }}.{{ .Minor }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.title: tofu-api
+      org.opencontainers.image.description: tofu-api, an InfraPI API over an OpenTofu-protocol provider
+      org.opencontainers.image.source: https://github.com/infrapi/tofu-api
+      org.opencontainers.image.url: https://github.com/infrapi/tofu-api
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .Date }}"
+      org.opencontainers.image.licenses: MIT
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
