@@ -151,8 +151,8 @@ See lib's [mcp/bridge](https://infrapi.github.io/lib/packages/mcp/#bridging-anot
 
 ## Several APIs behind one endpoint
 
-[ulgen](https://infrapi.github.io/ulgen/) puts this endpoint behind a single
+[Ülgen](https://infrapi.github.io/ulgen/) puts this endpoint behind a single
 MCP endpoint, next to other MCP servers. The agent logs in at Kayra once and
 gets every server's tools there, with the namespace as their `tenant`
-argument. ulgen passes the caller's token on to tofu-api, which still checks
+argument. Ülgen passes the caller's token on to tofu-api, which still checks
 every call itself: `authorize: upstream`, `tenant: {argument: namespace}`.
