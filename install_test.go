@@ -295,3 +295,15 @@ func TestConfigSourceOrBinaryPath(t *testing.T) {
 		assert.Error(t, err, bad)
 	}
 }
+
+// The installer names tofu-api to the registry or the mirror:
+// tofu-api/<version>, not Go's default.
+func TestInstallerUserAgent(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { got = r.UserAgent() }))
+	t.Cleanup(srv.Close)
+	resp, err := newInstaller(cliConfig{}).client.Get(srv.URL)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.True(t, strings.HasPrefix(got, "tofu-api/"), "User-Agent %q", got)
+}

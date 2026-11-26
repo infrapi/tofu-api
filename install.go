@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcl"
+
+	"github.com/infrapi/lib/pkg/std"
 )
 
 // Providers named by source and version are installed as `terraform init`
@@ -218,7 +220,9 @@ type installer struct {
 }
 
 func newInstaller(cfg cliConfig) *installer {
-	return &installer{cfg: cfg, client: &http.Client{Timeout: 10 * time.Minute}}
+	// tofu-api/<version> in the User-Agent (std): the registry's or the
+	// mirror's logs tell tofu-api
+	return &installer{cfg: cfg, client: std.UserAgentClient(&http.Client{Timeout: 10 * time.Minute})}
 }
 
 // install returns the binary of the provider's version for this platform,
